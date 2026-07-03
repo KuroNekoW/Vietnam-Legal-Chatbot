@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vnl-chatbot"
+version = "0.1.0"
+description = "Vietnam Law chatbot"
+requires-python = ">=3.11"
+
+dependencies = [
+    # Crawling
+    "playwright>=1.54.0",
+    "beautifulsoup4>=4.13.0",
+    "requests>=2.32.0",
+    "lxml>=6.0.0",
+    "datasets>=4.0.0",
+    "pyarrow>=21.0.0",
+
+    # Data
+    "pandas>=2.3.0",
+    "numpy>=2.3.0",
+
+    # Embedding
+    "sentence-transformers>=5.0.0",
+
+    # Vector Database
+    "faiss-cpu>=1.12.0",
+
+    # API
+    "fastapi>=0.116.0",
+    "uvicorn[standard]>=0.35.0",
+
+    # Validation
+    "pydantic>=2.11.0",
+
+    # Utilities
+    "python-dotenv>=1.1.0",
+    "tqdm>=4.67.0",
+    "loguru>=0.7.3"
+]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 88
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
