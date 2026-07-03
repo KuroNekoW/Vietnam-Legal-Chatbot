@@ -1,0 +1,21 @@
+Metadata-Version: 2.4
+Name: vn_legal_rag
+Version: 0.1.0
+Summary: Vietnam Law chatbot
+Requires-Python: >=3.11
+Requires-Dist: playwright>=1.54.0
+Requires-Dist: beautifulsoup4>=4.13.0
+Requires-Dist: requests>=2.32.0
+Requires-Dist: lxml>=6.0.0
+Requires-Dist: datasets>=4.0.0
+Requires-Dist: pyarrow>=21.0.0
+Requires-Dist: pandas>=2.3.0
+Requires-Dist: numpy>=2.3.0
+Requires-Dist: sentence-transformers>=5.0.0
+Requires-Dist: faiss-cpu>=1.12.0
+Requires-Dist: fastapi>=0.116.0
+Requires-Dist: uvicorn[standard]>=0.35.0
+Requires-Dist: pydantic>=2.11.0
+Requires-Dist: python-dotenv>=1.1.0
+Requires-Dist: tqdm>=4.67.0
+Requires-Dist: loguru>=0.7.3
