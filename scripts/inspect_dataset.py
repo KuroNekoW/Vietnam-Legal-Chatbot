@@ -1,21 +1,15 @@
-from itertools import islice
+from vn_legal_rag.ingestion import (
+    DatasetLoader,
+    DatasetProcessor,
+)
 
-from vn_legal_rag.ingestion.loader import DatasetLoader
-
+DATASET = "vohuutridung/vietnamese-legal-documents"
 
 loader = DatasetLoader(
-    "vohuutridung/vietnamese-legal-documents",
-    "content",
-    streaming=True
+    DATASET,
+    "metadata"
 )
 
 dataset = loader.load()
 
-print(dataset)
-
-sample = next(iter(dataset["data"]))
-
-print()
-
-for k, v in sample.items():
-    print(k, type(v))
+DatasetProcessor.inspect(dataset)
