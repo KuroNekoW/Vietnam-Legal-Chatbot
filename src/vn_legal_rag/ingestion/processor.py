@@ -4,48 +4,9 @@ from vn_legal_rag.models import LegalDocument
 
 
 class DatasetProcessor:
-    """
-    Convert HuggingFace dataset records into LegalDocument.
-    """
 
     @staticmethod
-    def inspect(dataset):
-
-        print(dataset)
-        print()
-
-        split_name = list(dataset.keys())[0]
-
-        sample = dataset[split_name][0]
-
-        print("=" * 60)
-        print("SAMPLE")
-        print("=" * 60)
-
-        for key, value in sample.items():
-            print(f"{key:<20} {type(value)}")
-
-    @staticmethod
-    def create_metadata_dict(dataset):
-
-        split_name = list(dataset.keys())[0]
-
-        metadata = {}
-
-        for row in dataset[split_name]:
-            metadata[row["id"]] = row
-
-        return metadata
-
-    @staticmethod
-    def _safe_str(value) -> str:
-        """
-        Safely convert any value to string.
-
-        None -> ""
-        str  -> stripped string
-        other -> str(value)
-        """
+    def _safe_str(value):
 
         if value is None:
             return ""
@@ -58,17 +19,15 @@ class DatasetProcessor:
         content_dataset,
     ) -> Iterable[LegalDocument]:
 
-        metadata = DatasetProcessor.create_metadata_dict(
-            metadata_dataset
-        )
+        metadata_split = list(metadata_dataset.keys())[0]
+        content_split = list(content_dataset.keys())[0]
 
-        split_name = list(content_dataset.keys())[0]
+        metadata_iter = iter(metadata_dataset[metadata_split])
+        content_iter = iter(content_dataset[content_split])
 
-        for row in content_dataset[split_name]:
+        for meta, content in zip(metadata_iter, content_iter):
 
-            meta = metadata.get(row["id"])
-
-            if meta is None:
+            if meta["id"] != content["id"]:
                 continue
 
             yield LegalDocument(
@@ -108,6 +67,6 @@ class DatasetProcessor:
                 ),
 
                 content=DatasetProcessor._safe_str(
-                    row.get("content")
+                    content.get("content")
                 ),
             )
