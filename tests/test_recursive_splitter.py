@@ -1,4 +1,4 @@
-from vn_legal_rag.chunking.recursive_splitter import LengthSplitter
+from vn_legal_rag.chunking import LengthSplitter
 from vn_legal_rag.models import Chunk
 
 

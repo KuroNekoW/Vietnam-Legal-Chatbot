@@ -4,9 +4,9 @@ from .regex import (
     POINT_PATTERN,
 )
 
-from .splitter import LegalSplitter
+from .legalsplitter import LegalSplitter
 from .chunker import LegalChunker
-from .recursive_splitter import LengthSplitter
+from .lengthsplitter import LengthSplitter
 
 __all__ = [
     "ARTICLE_PATTERN",

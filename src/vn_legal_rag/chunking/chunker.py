@@ -1,5 +1,5 @@
-from vn_legal_rag.chunking.splitter import LegalSplitter
-from vn_legal_rag.chunking.recursive_splitter import LengthSplitter
+from vn_legal_rag.chunking.legalsplitter import LegalSplitter
+from vn_legal_rag.chunking.lengthsplitter import LengthSplitter
 
 class LegalChunker:
 
