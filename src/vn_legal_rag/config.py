@@ -24,3 +24,9 @@ CHUNK_DATA_DIR.mkdir(
 )
 
 CHUNK_FILE = CHUNK_DATA_DIR / "chunks.jsonl"
+
+# Embedding
+
+EMBEDDING_MODEL = "BAAI/bge-m3"
+
+EMBEDDING_BATCH_SIZE = 32
