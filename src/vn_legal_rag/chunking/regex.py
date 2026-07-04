@@ -1,8 +1,8 @@
 import re
 
 ARTICLE_PATTERN = re.compile(
-    r"(?=^\s*Điều\s+\d+[A-Za-z]?\.)",
-    flags=re.MULTILINE | re.IGNORECASE,
+    r"^Điều\s+\d+[\.:]?\s.*",
+    flags=re.MULTILINE,
 )
 
 CLAUSE_PATTERN = re.compile(

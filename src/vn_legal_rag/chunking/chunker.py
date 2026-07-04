@@ -9,4 +9,4 @@ class LegalChunker:
 
     def chunk(self, document):
 
-        return self.splitter.split(document)
+        yield from self.splitter.split(document)
