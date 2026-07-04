@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Iterable
+from typing import Generator, Iterable
 
 from vn_legal_rag.models import LegalDocument
 
@@ -8,7 +8,10 @@ from vn_legal_rag.models import LegalDocument
 def save_jsonl(
     documents: Iterable[LegalDocument],
     output_path: Path,
-):
+) -> None:
+    """
+    Save LegalDocument objects to a JSONL file.
+    """
 
     output_path.parent.mkdir(
         parents=True,
@@ -34,14 +37,23 @@ def save_jsonl(
 
 def load_jsonl(
     input_path: Path,
-):
+) -> Generator[LegalDocument, None, None]:
+    """
+    Lazily load LegalDocument objects from a JSONL file.
+    """
 
     with open(
         input_path,
+        "r",
         encoding="utf-8",
     ) as f:
 
         for line in f:
+
+            line = line.strip()
+
+            if not line:
+                continue
 
             yield LegalDocument.model_validate_json(
                 line
