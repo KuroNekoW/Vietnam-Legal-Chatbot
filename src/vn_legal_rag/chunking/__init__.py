@@ -5,8 +5,8 @@ from .regex import (
 )
 
 from .splitter import LegalSplitter
-
 from .chunker import LegalChunker
+from .recursive_splitter import LengthSplitter
 
 __all__ = [
     "ARTICLE_PATTERN",
@@ -14,4 +14,6 @@ __all__ = [
     "POINT_PATTERN",
     "LegalSplitter",
     "LegalChunker",
+    "LegalSplitter",
+    "LengthSplitter",
 ]
