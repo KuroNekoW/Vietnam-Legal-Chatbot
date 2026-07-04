@@ -61,7 +61,7 @@ class LengthSplitter:
 
                 article=chunk.article,
 
-                chunk_index=index,
+                chunk_index=chunk.chunk_index,
 
                 start_char=chunk.start_char + start,
 

@@ -14,6 +14,8 @@ class Chunk(BaseModel):
 
     chunk_index: int
 
+    sub_chunk_index: int
+
     start_char: int
 
     end_char: int
