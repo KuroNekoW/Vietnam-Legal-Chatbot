@@ -1,53 +1,51 @@
-from vn_legal_rag.config import PROCESSED_DATA_DIR
-
-from vn_legal_rag.utils import load_jsonl
-
 from vn_legal_rag.chunking import (
     LegalSplitter,
     LengthSplitter,
+)
+
+from vn_legal_rag.config import (
+    LEGAL_DOCUMENT_FILE,
+)
+
+from vn_legal_rag.utils import (
+    load_jsonl,
 )
 
 
 def main():
 
     # Load first document
-    documents = load_jsonl(
-        PROCESSED_DATA_DIR / "legal_documents.jsonl"
+    document = next(
+        load_jsonl(LEGAL_DOCUMENT_FILE)
     )
 
-    document = next(documents)
-
-    # Step 1: Legal-aware splitting
-    legal_chunks = list(
+    # Semantic splitting
+    semantic_chunks = list(
         LegalSplitter().split(document)
     )
 
-    # Step 2: Length-aware splitting
-    splitter = LengthSplitter(
+    # Length splitting
+    length_splitter = LengthSplitter(
         chunk_size=1000,
         overlap=200,
     )
 
     final_chunks = []
 
-    for chunk in legal_chunks:
+    for chunk in semantic_chunks:
         final_chunks.extend(
-            splitter.split(chunk)
+            length_splitter.split(chunk)
         )
 
-    # Summary
     print()
-
     print("=" * 100)
     print(document.title)
     print("=" * 100)
 
     print()
-
-    print(f"Semantic chunks : {len(legal_chunks)}")
+    print(f"Semantic chunks : {len(semantic_chunks)}")
     print(f"Final chunks    : {len(final_chunks)}")
 
-    # Detail
     for i, chunk in enumerate(final_chunks):
 
         print()
@@ -55,35 +53,31 @@ def main():
         print(f"Chunk {i}")
         print("=" * 100)
 
-        print(f"chunk_id           : {chunk.chunk_id}")
-        print(f"document_id        : {chunk.document_id}")
+        print(f"chunk_id            : {chunk.chunk_id}")
+        print(f"document_id         : {chunk.document_id}")
+        print(f"article             : {chunk.article}")
 
         print()
 
-        print(f"title              : {chunk.title}")
-        print(f"article            : {chunk.article}")
+        print(f"title               : {chunk.title}")
+        print(f"legal_type          : {chunk.legal_type}")
+        print(f"legal_sectors       : {chunk.legal_sectors}")
+        print(f"issuing_authority   : {chunk.issuing_authority}")
+        print(f"issuance_date       : {chunk.issuance_date}")
 
         print()
 
-        print(f"legal_type         : {chunk.legal_type}")
-        print(f"legal_sectors      : {chunk.legal_sectors}")
-        print(f"issuing_authority  : {chunk.issuing_authority}")
-        print(f"issuance_date      : {chunk.issuance_date}")
+        print(f"chunk_index         : {chunk.chunk_index}")
+        print(f"start_char          : {chunk.start_char}")
+        print(f"end_char            : {chunk.end_char}")
+        print(f"text_length         : {len(chunk.text)}")
 
         print()
-
-        print(f"chunk_index        : {chunk.chunk_index}")
-        print(f"start_char         : {chunk.start_char}")
-        print(f"end_char           : {chunk.end_char}")
-        print(f"length             : {len(chunk.text)}")
-
-        print()
-
         print("-" * 100)
         print(chunk.text[:700])
 
         if len(chunk.text) > 700:
-            print("...")
+            print("\n...")
 
         print("-" * 100)
 

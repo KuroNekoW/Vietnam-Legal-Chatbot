@@ -14,6 +14,5 @@ __all__ = [
     "POINT_PATTERN",
     "LegalSplitter",
     "LegalChunker",
-    "LegalSplitter",
     "LengthSplitter",
 ]
