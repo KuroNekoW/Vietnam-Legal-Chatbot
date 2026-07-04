@@ -63,6 +63,8 @@ class LengthSplitter:
 
                 chunk_index=chunk.chunk_index,
 
+                sub_chunk_index=index,
+
                 start_char=chunk.start_char + start,
 
                 end_char=chunk.start_char + end,

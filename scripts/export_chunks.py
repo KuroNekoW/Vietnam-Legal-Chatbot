@@ -57,4 +57,11 @@ save_chunks_jsonl(
 )
 
 print("\nChunk export completed!")
+
+total = 0
+
+for chunk in generate_chunks():
+    total += 1
+
+print(total)
 print(CHUNK_FILE)

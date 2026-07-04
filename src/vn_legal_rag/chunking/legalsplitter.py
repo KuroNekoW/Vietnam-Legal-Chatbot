@@ -60,6 +60,8 @@ class LegalSplitter:
 
                 chunk_index=0,
 
+                sub_chunk_index=0,
+
                 start_char=0,
 
                 end_char=len(text),
@@ -100,6 +102,8 @@ class LegalSplitter:
                 chunk_index=0,
 
                 start_char=0,
+
+                sub_chunk_index=0,
 
                 end_char=first_start,
 
@@ -147,6 +151,8 @@ class LegalSplitter:
                 article=article_title,
 
                 chunk_index=chunk_index,
+
+                sub_chunk_index=0,
 
                 start_char=start,
 
