@@ -1,16 +1,33 @@
 import re
 
+#
+# Điều
+#
+
 ARTICLE_PATTERN = re.compile(
-    r"^Điều\s+\d+[\.:]?\s.*",
-    flags=re.MULTILINE,
+    r"(?m)^Điều\s+\d+[A-Za-z]?(?:\.\s*.*)?"
 )
+
+#
+# Khoản
+#
 
 CLAUSE_PATTERN = re.compile(
-    r"(?=^\s*\d+\.)",
-    flags=re.MULTILINE,
+    r"(?m)^\d+\.\s"
 )
 
+#
+# Điểm
+#
+
 POINT_PATTERN = re.compile(
-    r"(?=^\s*[a-zđ]\))",
-    flags=re.MULTILINE | re.IGNORECASE,
+    r"(?m)^[a-zđ]\)\s"
+)
+
+#
+# Bộ câu hỏi
+#
+
+QUESTION_PATTERN = re.compile(
+    r"(?im)^Câu\s+\d+\."
 )

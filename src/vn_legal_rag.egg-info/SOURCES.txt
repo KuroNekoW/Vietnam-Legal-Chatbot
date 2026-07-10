@@ -1,4 +1,6 @@
 pyproject.toml
+src/vn_legal_rag/__init__.py
+src/vn_legal_rag/config.py
 src/vn_legal_rag.egg-info/PKG-INFO
 src/vn_legal_rag.egg-info/SOURCES.txt
 src/vn_legal_rag.egg-info/dependency_links.txt
@@ -8,10 +10,13 @@ src/vn_legal_rag/api/__init__.py
 src/vn_legal_rag/api/main.py
 src/vn_legal_rag/api/routes.py
 src/vn_legal_rag/api/schemas.py
+src/vn_legal_rag/chunking/__init__.py
+src/vn_legal_rag/chunking/chunker.py
+src/vn_legal_rag/chunking/legalsplitter.py
+src/vn_legal_rag/chunking/lengthsplitter.py
+src/vn_legal_rag/chunking/regex.py
 src/vn_legal_rag/embedding/__init__.py
-src/vn_legal_rag/embedding/builder.py
-src/vn_legal_rag/embedding/encoder.py
-src/vn_legal_rag/embedding/storage.py
+src/vn_legal_rag/embedding/model.py
 src/vn_legal_rag/evaluation/__init__.py
 src/vn_legal_rag/evaluation/benchmark.py
 src/vn_legal_rag/evaluation/metrics.py
@@ -27,10 +32,8 @@ src/vn_legal_rag/models/chunk.py
 src/vn_legal_rag/models/citation.py
 src/vn_legal_rag/models/document.py
 src/vn_legal_rag/preprocessing/__init__.py
-src/vn_legal_rag/preprocessing/chunker.py
 src/vn_legal_rag/preprocessing/cleaner.py
 src/vn_legal_rag/preprocessing/metadata.py
-src/vn_legal_rag/preprocessing/splitter.py
 src/vn_legal_rag/retrieval/__init__.py
 src/vn_legal_rag/retrieval/bm25_store.py
 src/vn_legal_rag/retrieval/faiss_store.py
@@ -42,6 +45,11 @@ src/vn_legal_rag/utils/io.py
 src/vn_legal_rag/utils/logger.py
 src/vn_legal_rag/utils/seed.py
 src/vn_legal_rag/utils/timer.py
+tests/test_chunker.py
 tests/test_document.py
+tests/test_embedding.py
 tests/test_loader.py
 tests/test_processor.py
+tests/test_recursive_splitter.py
+tests/test_regex.py
+tests/test_splitter.py

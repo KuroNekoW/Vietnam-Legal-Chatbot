@@ -7,6 +7,8 @@ from .regex import (
 from .legalsplitter import LegalSplitter
 from .chunker import LegalChunker
 from .lengthsplitter import LengthSplitter
+from .clausesplitter import ClauseSplitter
+from .pointsplitter import PointSplitter
 
 __all__ = [
     "ARTICLE_PATTERN",
@@ -15,4 +17,6 @@ __all__ = [
     "LegalSplitter",
     "LegalChunker",
     "LengthSplitter",
+    "ClauseSplitter",
+    "PointSplitter",
 ]

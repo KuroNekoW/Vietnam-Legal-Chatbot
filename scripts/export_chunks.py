@@ -2,6 +2,8 @@ from tqdm import tqdm
 
 from vn_legal_rag.chunking import (
     LegalSplitter,
+    ClauseSplitter,
+    PointSplitter,
     LengthSplitter,
 )
 
@@ -17,11 +19,9 @@ from vn_legal_rag.utils import (
 )
 
 
-documents = load_jsonl(
-    LEGAL_DOCUMENT_FILE
-)
-
 semantic_splitter = LegalSplitter()
+clause_splitter = ClauseSplitter()
+point_splitter = PointSplitter()
 
 length_splitter = LengthSplitter(
     chunk_size=1000,
@@ -31,37 +31,65 @@ length_splitter = LengthSplitter(
 
 def generate_chunks():
 
-    for document in tqdm(
+    total_chunks = 0
+
+    documents = load_jsonl(
+        LEGAL_DOCUMENT_FILE,
+    )
+
+    progress = tqdm(
         documents,
         total=TOTAL_DOCUMENTS,
         desc="Chunking",
         unit="docs",
         colour="green",
-        ncols=100,
-    ):
+        dynamic_ncols=True,
+    )
 
-        semantic_chunks = semantic_splitter.split(document)
+    for document in progress:
 
-        for semantic_chunk in semantic_chunks:
+        #
+        # Điều
+        #
 
-            final_chunks = length_splitter.split(
-                semantic_chunk
-            )
+        for article in semantic_splitter.split(document):
 
-            yield from final_chunks
+            #
+            # Khoản
+            #
+
+            for clause in clause_splitter.split(article):
+
+                #
+                # Điểm
+                #
+
+                for point in point_splitter.split(clause):
+
+                    #
+                    # Length split
+                    #
+
+                    for chunk in length_splitter.split(point):
+
+                        total_chunks += 1
+
+                        yield chunk
+
+    print()
+    print(f"Total chunks: {total_chunks:,}")
 
 
-save_chunks_jsonl(
-    generate_chunks(),
-    CHUNK_FILE,
-)
+if __name__ == "__main__":
 
-print("\nChunk export completed!")
+    save_chunks_jsonl(
+        generate_chunks(),
+        CHUNK_FILE,
+    )
 
-total = 0
-
-for chunk in generate_chunks():
-    total += 1
-
-print(total)
-print(CHUNK_FILE)
+    print()
+    print("=" * 60)
+    print("Chunk export completed")
+    print("=" * 60)
+    print(CHUNK_FILE)
+    print()

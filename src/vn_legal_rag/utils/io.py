@@ -1,4 +1,5 @@
 import json
+import numpy as np
 from pathlib import Path
 from typing import Generator, Iterable
 
@@ -94,3 +95,76 @@ def load_chunks_jsonl(
         for line in f:
 
             yield Chunk.model_validate_json(line)
+
+def load_chunk_index(
+    input_path: Path,
+):
+
+    with open(
+        input_path,
+        encoding="utf-8",
+    ) as f:
+
+        for line in f:
+
+            yield json.loads(line)
+
+def save_chunk_index(
+    index,
+    output_path: Path,
+):
+
+    output_path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    with open(
+        output_path,
+        "w",
+        encoding="utf-8",
+    ) as f:
+
+        json.dump(
+            index,
+            f,
+            ensure_ascii=False,
+            indent=2,
+        )
+
+# Embedding
+
+def append_chunk_index(
+    path: Path,
+    rows: list[dict],
+):
+
+    with open(
+        path,
+        "a",
+        encoding="utf-8",
+    ) as f:
+
+        for row in rows:
+
+            json.dump(
+                row,
+                f,
+                ensure_ascii=False,
+            )
+
+            f.write("\n")
+
+def count_chunks(
+    path: Path,
+):
+
+    with open(
+        path,
+        encoding="utf-8",
+    ) as f:
+
+        return sum(
+            1
+            for _ in f
+        )
