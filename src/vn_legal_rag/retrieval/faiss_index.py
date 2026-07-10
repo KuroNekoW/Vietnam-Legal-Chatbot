@@ -8,15 +8,11 @@ import numpy as np
 
 class FaissIndex:
     """
-    Wrapper around FAISS IndexFlatIP.
+    Wrapper của FAISS IndexFlatIP.
 
-    Responsibilities
-    ----------------
-    - create index
-    - add embeddings
-    - search
-    - save
-    - load
+    Vì embedding đã normalize nên:
+
+        cosine similarity == inner product
     """
 
     def __init__(
@@ -25,11 +21,6 @@ class FaissIndex:
     ):
 
         self.dimension = dimension
-
-        #
-        # Cosine similarity
-        # (vectors are already normalized)
-        #
 
         self.index = faiss.IndexFlatIP(
             dimension
@@ -40,40 +31,80 @@ class FaissIndex:
         self,
     ) -> int:
 
+        """
+        Number of vectors in index.
+        """
+
         return self.index.ntotal
+
+    @property
+    def is_empty(
+        self,
+    ) -> bool:
+
+        return self.ntotal == 0
 
     def add(
         self,
-        embeddings: np.ndarray,
-    ) -> None:
+        vectors: np.ndarray,
+    ):
 
-        embeddings = embeddings.astype(
-            np.float32,
-            copy=False,
+        """
+        Add vectors into FAISS.
+        """
+
+        vectors = np.asarray(
+            vectors,
+            dtype=np.float32,
         )
 
+        if vectors.ndim == 1:
+
+            vectors = vectors.reshape(
+                1,
+                -1,
+            )
+
+        if vectors.shape[1] != self.dimension:
+
+            raise ValueError(
+                f"Expected dimension={self.dimension}, "
+                f"got {vectors.shape[1]}"
+            )
+
         self.index.add(
-            embeddings
+            vectors
         )
 
     def search(
         self,
-        query_embedding: np.ndarray,
+        query: np.ndarray,
         top_k: int = 5,
     ):
 
-        if query_embedding.ndim == 1:
+        """
+        Search nearest vectors.
 
-            query_embedding = query_embedding.reshape(
+        Returns
+        -------
+        scores
+        indices
+        """
+
+        query = np.asarray(
+            query,
+            dtype=np.float32,
+        )
+
+        if query.ndim == 1:
+
+            query = query.reshape(
                 1,
                 -1,
             )
 
         scores, indices = self.index.search(
-            query_embedding.astype(
-                np.float32,
-                copy=False,
-            ),
+            query,
             top_k,
         )
 
@@ -81,8 +112,10 @@ class FaissIndex:
 
     def save(
         self,
-        path: Path,
+        path: str | Path,
     ):
+
+        path = Path(path)
 
         path.parent.mkdir(
             parents=True,
@@ -97,8 +130,16 @@ class FaissIndex:
     @classmethod
     def load(
         cls,
-        path: Path,
+        path: str | Path,
     ):
+
+        path = Path(path)
+
+        if not path.exists():
+
+            raise FileNotFoundError(
+                path
+            )
 
         index = faiss.read_index(
             str(path)
@@ -111,3 +152,19 @@ class FaissIndex:
         obj.index = index
 
         return obj
+
+    def __len__(
+        self,
+    ):
+
+        return self.ntotal
+
+    def __repr__(
+        self,
+    ):
+
+        return (
+            f"FaissIndex("
+            f"dimension={self.dimension}, "
+            f"vectors={self.ntotal})"
+        )

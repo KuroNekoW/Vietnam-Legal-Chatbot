@@ -1,142 +1,100 @@
 from __future__ import annotations
 
-from tqdm import tqdm
+from pathlib import Path
 
 from vn_legal_rag.utils import append_chunk_index
 
 
 class IndexBuilder:
     """
-    Build FAISS index from streamed chunks.
+    Build FAISS index incrementally.
 
-    Pipeline
+    Responsibilities
+    ----------------
+    - Encode one batch
+    - Add vectors into FAISS
+    - Save metadata
 
-    Chunks
-        ↓
-    Batch
-        ↓
-    Embedding
-        ↓
-    FAISS.add()
-        ↓
-    chunk_index.jsonl
+    Does NOT
+    --------
+    - iterate dataset
+    - display progress
+    - save/load index
+    - checkpoint
     """
 
     def __init__(
         self,
         embedding_model,
         faiss_index,
-        chunk_index_path,
-        batch_size: int = 512,
+        chunk_index_path: str | Path,
     ):
 
         self.embedding_model = embedding_model
         self.faiss = faiss_index
-        self.chunk_index_path = chunk_index_path
-        self.batch_size = batch_size
+        self.chunk_index_path = Path(chunk_index_path)
 
-    def build(
+    def process_batch(
         self,
         chunks,
-        total_chunks: int | None = None,
-    ):
+        batch_size: int = 512,
+    ) -> int:
+        """
+        Process ONE batch.
 
-        texts = []
-        metadata = []
+        Parameters
+        ----------
+        chunks
+            list[Chunk]
 
-        progress = tqdm(
-            total=total_chunks,
-            desc="Indexing",
-            unit="chunk",
-            colour="green",
-            dynamic_ncols=True,
-        )
+        Returns
+        -------
+        int
+            Number of vectors added.
+        """
 
-        for chunk in chunks:
+        if not chunks:
+            return 0
 
-            texts.append(
-                chunk.text
-            )
-
-            metadata.append(
-                chunk
-            )
-
-            if len(texts) >= self.batch_size:
-
-                self._flush(
-                    texts,
-                    metadata,
-                )
-
-                progress.update(
-                    len(texts)
-                )
-
-                texts.clear()
-                metadata.clear()
-
-        #
-        # remaining
-        #
-
-        if texts:
-
-            self._flush(
-                texts,
-                metadata,
-            )
-
-            progress.update(
-                len(texts)
-            )
-
-        progress.close()
-
-    def _flush(
-        self,
-        texts,
-        metadata,
-    ):
+        texts = [
+            chunk.text
+            for chunk in chunks
+        ]
 
         embeddings = self.embedding_model.encode_batch(
             texts,
-            batch_size=self.batch_size,
+            batch_size=batch_size,
         )
 
         self.faiss.add(
             embeddings
         )
 
-        rows = []
-
-        for chunk in metadata:
-
-            rows.append(
-
-                {
-
-                    "chunk_id": chunk.chunk_id,
-
-                    "document_id": chunk.document_id,
-
-                    "title": chunk.title,
-
-                    "article": chunk.article,
-
-                    "legal_type": chunk.legal_type,
-
-                    "legal_sectors": chunk.legal_sectors,
-
-                    "issuing_authority": chunk.issuing_authority,
-
-                    "issuance_date": chunk.issuance_date,
-
-                }
-
-            )
-
         append_chunk_index(
             self.chunk_index_path,
-            rows,
+            (
+                {
+                    "chunk_id": chunk.chunk_id,
+                    "document_id": chunk.document_id,
+                    "title": chunk.title,
+                    "article": chunk.article,
+                    "legal_type": chunk.legal_type,
+                    "legal_sectors": chunk.legal_sectors,
+                    "issuing_authority": chunk.issuing_authority,
+                    "issuance_date": chunk.issuance_date,
+                }
+                for chunk in chunks
+            ),
         )
+
+        return len(chunks)
+
+    @property
+    def vectors(
+        self,
+    ) -> int:
+        """
+        Current number of vectors.
+        """
+
+        return self.faiss.ntotal

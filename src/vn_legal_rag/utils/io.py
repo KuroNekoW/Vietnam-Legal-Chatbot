@@ -136,8 +136,13 @@ def save_chunk_index(
 
 def append_chunk_index(
     path: Path,
-    rows: list[dict],
+    rows,
 ):
+
+    path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
 
     with open(
         path,
