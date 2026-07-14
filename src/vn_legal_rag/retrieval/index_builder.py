@@ -14,13 +14,6 @@ class IndexBuilder:
     - Encode one batch
     - Add vectors into FAISS
     - Save metadata
-
-    Does NOT
-    --------
-    - iterate dataset
-    - display progress
-    - save/load index
-    - checkpoint
     """
 
     def __init__(
@@ -28,29 +21,20 @@ class IndexBuilder:
         embedding_model,
         faiss_index,
         chunk_index_path: str | Path,
+        batch_size: int = 512,
     ):
 
         self.embedding_model = embedding_model
         self.faiss = faiss_index
         self.chunk_index_path = Path(chunk_index_path)
+        self.batch_size = batch_size
 
     def process_batch(
         self,
         chunks,
-        batch_size: int = 512,
     ) -> int:
         """
-        Process ONE batch.
-
-        Parameters
-        ----------
-        chunks
-            list[Chunk]
-
-        Returns
-        -------
-        int
-            Number of vectors added.
+        Process one batch.
         """
 
         if not chunks:
@@ -63,7 +47,7 @@ class IndexBuilder:
 
         embeddings = self.embedding_model.encode_batch(
             texts,
-            batch_size=batch_size,
+            batch_size=self.batch_size,
         )
 
         self.faiss.add(
@@ -90,11 +74,6 @@ class IndexBuilder:
         return len(chunks)
 
     @property
-    def vectors(
-        self,
-    ) -> int:
-        """
-        Current number of vectors.
-        """
+    def vectors(self) -> int:
 
         return self.faiss.ntotal

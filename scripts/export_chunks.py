@@ -10,12 +10,12 @@ from vn_legal_rag.chunking import (
 from vn_legal_rag.config import (
     LEGAL_DOCUMENT_FILE,
     CHUNK_FILE,
-    TOTAL_DOCUMENTS,
 )
 
 from vn_legal_rag.utils import (
     load_jsonl,
     save_chunks_jsonl,
+    count_jsonl,
 )
 
 
@@ -37,9 +37,13 @@ def generate_chunks():
         LEGAL_DOCUMENT_FILE,
     )
 
+    total_documents = count_jsonl(
+        LEGAL_DOCUMENT_FILE,
+    )
+
     progress = tqdm(
         documents,
-        total=TOTAL_DOCUMENTS,
+        total=total_documents,
         desc="Chunking",
         unit="docs",
         colour="green",

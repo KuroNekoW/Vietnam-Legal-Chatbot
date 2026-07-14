@@ -1,4 +1,5 @@
 from tqdm import tqdm
+from collections import Counter
 
 from vn_legal_rag.config import TOTAL_DOCUMENTS
 
@@ -14,6 +15,7 @@ from vn_legal_rag.ingestion import (
 from vn_legal_rag.preprocessing import (
     DocumentCleaner,
     MetadataProcessor,
+    DocumentFilter,
 )
 
 from vn_legal_rag.utils import (
@@ -50,6 +52,10 @@ documents = DatasetProcessor.documents(
 
 def preprocess():
 
+    statistics = Counter()
+
+    kept = 0
+
     for doc in tqdm(
         documents,
         total=TOTAL_DOCUMENTS,
@@ -62,8 +68,35 @@ def preprocess():
         doc = MetadataProcessor.process(doc)
         doc = DocumentCleaner.clean(doc)
 
+        keep, reason = DocumentFilter.check(doc)
+
+        if not keep:
+
+            statistics[reason] += 1
+            continue
+
+        kept += 1
+
         yield doc
 
+    print()
+    print("=" * 60)
+    print("FILTER STATISTIC")
+    print("=" * 60)
+
+    print(f"Documents kept : {kept:,}")
+    print(f"Documents skip : {sum(statistics.values()):,}")
+    print()
+
+    if statistics:
+
+        print("Reasons")
+
+        for reason, count in statistics.most_common():
+
+            print(f"{reason:<25} {count:,}")
+
+    print("=" * 60)
 
 save_jsonl(
     preprocess(),

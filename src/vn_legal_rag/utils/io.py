@@ -61,6 +61,18 @@ def load_jsonl(
                 line
             )
 
+def count_jsonl(path):
+
+    with open(
+        path,
+        encoding="utf-8",
+    ) as f:
+
+        return sum(
+            1
+            for _ in f
+        )
+
 # Chunks
 
 def save_chunks_jsonl(

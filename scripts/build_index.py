@@ -16,20 +16,15 @@ from vn_legal_rag.retrieval import (
     IndexBuilder,
 )
 
-from vn_legal_rag.utils import load_chunks_jsonl
+from vn_legal_rag.utils import (
+    load_chunks_jsonl,
+    count_jsonl,
+)
 
-
-# ============================================================
 # Config
-# ============================================================
-
 CHECKPOINT_EVERY = 100_000
 
-
-# ============================================================
 # Main
-# ============================================================
-
 print()
 print("=" * 60)
 print("BUILD VECTOR INDEX")
@@ -65,16 +60,22 @@ builder = IndexBuilder(
     embedding_model=model,
     faiss_index=faiss_index,
     chunk_index_path=CHUNK_INDEX_FILE,
+    batch_size=EMBEDDING_BATCH_SIZE,
 )
 
 print("Loading chunks...")
 print()
+
+total_chunks = count_jsonl(
+    CHUNK_FILE
+)
 
 batch = []
 
 processed = 0
 
 progress = tqdm(
+    total=total_chunks,
     desc="Indexing",
     unit="chunk",
     colour="green",
@@ -89,11 +90,10 @@ for chunk in load_chunks_jsonl(
         chunk
     )
 
-    if len(batch) >= EMBEDDING_BATCH_SIZE:
+    if len(batch) >= builder.batch_size:
 
         processed += builder.process_batch(
-            batch,
-            batch_size=EMBEDDING_BATCH_SIZE,
+        batch,
         )
 
         progress.update(
@@ -129,7 +129,6 @@ if batch:
 
     processed += builder.process_batch(
         batch,
-        batch_size=EMBEDDING_BATCH_SIZE,
     )
 
     progress.update(
