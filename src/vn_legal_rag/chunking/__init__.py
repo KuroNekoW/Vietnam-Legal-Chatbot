@@ -4,19 +4,20 @@ from .regex import (
     POINT_PATTERN,
 )
 
-from .legalsplitter import LegalSplitter
-from .chunker import LegalChunker
-from .lengthsplitter import LengthSplitter
-from .clausesplitter import ClauseSplitter
-from .pointsplitter import PointSplitter
+from .legal_splitter import LegalSplitter
+from .clause_splitter import ClauseSplitter
+from .point_splitter import PointSplitter
+from .length_splitter import LengthSplitter
 
 __all__ = [
+    # Regex
     "ARTICLE_PATTERN",
     "CLAUSE_PATTERN",
     "POINT_PATTERN",
+
+    # Splitters
     "LegalSplitter",
-    "LegalChunker",
-    "LengthSplitter",
     "ClauseSplitter",
     "PointSplitter",
+    "LengthSplitter",
 ]

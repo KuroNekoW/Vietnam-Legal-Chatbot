@@ -12,8 +12,15 @@ class IndexBuilder:
     Responsibilities
     ----------------
     - Encode one batch
-    - Add vectors into FAISS
-    - Save metadata
+    - Add vectors vào FAISS
+    - Ghi metadata tương ứng
+
+    Không chịu trách nhiệm:
+    -----------------------
+    - đọc file
+    - progress bar
+    - checkpoint
+    - save/load faiss
     """
 
     def __init__(
@@ -52,7 +59,7 @@ class IndexBuilder:
         )
 
         #
-        # Current FAISS position
+        # Current FAISS id
         #
 
         start_id = self.faiss.ntotal
@@ -69,19 +76,19 @@ class IndexBuilder:
         # Save metadata
         #
 
-        rows = []
+        append_chunk_index(
 
-        for offset, chunk in enumerate(chunks):
+            self.chunk_index_path,
 
-            rows.append(
+            (
 
                 {
 
                     #
-                    # FAISS
+                    # Vector id
                     #
 
-                    "faiss_id": start_id + offset,
+                    "faiss_id": start_id + i,
 
                     #
                     # Chunk
@@ -89,45 +96,41 @@ class IndexBuilder:
 
                     "chunk_id": chunk.chunk_id,
 
-                    #
-                    # Document
-                    #
-
                     "document_id": chunk.document_id,
 
                     #
                     # Hierarchy
                     #
 
-                    "article_no": getattr(
-                        chunk,
-                        "article_no",
-                        None,
-                    ),
+                    "article_no": chunk.article_no,
 
-                    "clause_no": getattr(
-                        chunk,
-                        "clause_no",
-                        None,
-                    ),
+                    "clause_no": chunk.clause_no,
 
-                    "point": getattr(
-                        chunk,
-                        "point",
-                        None,
-                    ),
-
-                    #
-                    # Human-readable
-                    #
+                    "point_no": chunk.point_no,
 
                     "article": chunk.article,
 
-                    "title": chunk.title,
+                    "clause": chunk.clause,
+
+                    "point": chunk.point,
+
+                    #
+                    # Position
+                    #
+
+                    "chunk_index": chunk.chunk_index,
+
+                    "sub_chunk_index": chunk.sub_chunk_index,
+
+                    "start_char": chunk.start_char,
+
+                    "end_char": chunk.end_char,
 
                     #
                     # Metadata
                     #
+
+                    "title": chunk.title,
 
                     "legal_type": chunk.legal_type,
 
@@ -137,30 +140,21 @@ class IndexBuilder:
 
                     "issuance_date": chunk.issuance_date,
 
-                    "url": getattr(
-                        chunk,
-                        "url",
-                        None,
-                    ),
+                    "url": chunk.url,
 
-                    "signers": getattr(
-                        chunk,
-                        "signers",
-                        None,
-                    ),
+                    "signers": chunk.signers,
 
                 }
 
-            )
+                for i, chunk in enumerate(chunks)
 
-        append_chunk_index(
-            self.chunk_index_path,
-            rows,
+            ),
+
         )
 
         return len(chunks)
 
     @property
-    def vectors(self):
+    def vectors(self) -> int:
 
         return self.faiss.ntotal
