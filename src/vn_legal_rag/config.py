@@ -35,7 +35,7 @@ CHUNK_INDEX_FILE = (INDEX_DIR / "chunk_index.jsonl")
 
 # Embedding
 
-EMBEDDING_MODEL = "BAAI/bge-m3"
+EMBEDDING_MODEL = "intfloat/multilingual-e5-base"
 
 EMBEDDING_BATCH_SIZE = 128
 

@@ -1,22 +1,20 @@
 from __future__ import annotations
 
-from collections import Counter
-
 
 class DocumentFilter:
 
-    BLACKLIST_TITLE = (
-        "bộ câu hỏi",
-        "ngân hàng câu hỏi",
-        "đề thi",
-        "đáp án",
-        "câu hỏi sát hạch",
-        "bộ đề",
-    )
+    #
+    # Chỉ giữ các loại văn bản này
+    #
 
-    BLACKLIST_TYPE = (
-        # thêm sau nếu cần
-    )
+    ALLOWED_TYPES = {
+
+        "quyết định",
+        "công văn",
+        "nghị quyết",
+        "thông tư",
+
+    }
 
     @classmethod
     def check(
@@ -24,29 +22,24 @@ class DocumentFilter:
         document,
     ) -> tuple[bool, str]:
 
-        title = (document.title or "").lower()
-        legal_type = (document.legal_type or "").lower()
-        content = (document.content or "").strip()
+        legal_type = (
+            document.legal_type or ""
+        ).strip().lower()
+
+        content = (
+            document.content or ""
+        ).strip()
 
         #
-        # blacklist title
+        # legal type
         #
 
-        for keyword in cls.BLACKLIST_TITLE:
+        if legal_type not in cls.ALLOWED_TYPES:
 
-            if keyword in title:
-
-                return False, f"title:{keyword}"
-
-        #
-        # blacklist legal type
-        #
-
-        for keyword in cls.BLACKLIST_TYPE:
-
-            if keyword in legal_type:
-
-                return False, f"type:{keyword}"
+            return (
+                False,
+                f"type:{legal_type or 'unknown'}",
+            )
 
         #
         # empty
@@ -67,6 +60,9 @@ class DocumentFilter:
         return True, "ok"
 
     @classmethod
-    def should_keep(cls, document):
+    def should_keep(
+        cls,
+        document,
+    ):
 
         return cls.check(document)[0]
