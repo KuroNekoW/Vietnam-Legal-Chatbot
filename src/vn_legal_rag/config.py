@@ -1,44 +1,77 @@
 from pathlib import Path
 
+# ============================================================
+# Project
+# ============================================================
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 DATA_DIR = PROJECT_ROOT / "data"
 
 RAW_DATA_DIR = DATA_DIR / "raw"
-
 PROCESSED_DATA_DIR = DATA_DIR / "processed"
 
-LEGAL_DOCUMENT_FILE = PROCESSED_DATA_DIR / "legal_documents.jsonl"
+# ============================================================
+# Documents
+# ============================================================
 
-EMBEDDING_DIR = DATA_DIR / "embeddings"
+LEGAL_DOCUMENT_FILE = (
+    PROCESSED_DATA_DIR /
+    "legal_documents.jsonl"
+)
 
-TOTAL_DOCUMENTS = 518255
+TOTAL_DOCUMENTS = 518_255
 
-# Chunks
+# ============================================================
+# Chunk
+# ============================================================
 
 MAX_SUBCHUNKS_PER_ARTICLE = 100
 
-CHUNK_DATA_DIR = DATA_DIR / "chunks"
+CHUNK_DATA_DIR = (
+    DATA_DIR /
+    "chunks"
+)
 
-CHUNK_DATA_DIR.mkdir(parents=True, exist_ok=True,)
+CHUNK_DATA_DIR.mkdir(
+    parents=True,
+    exist_ok=True,
+)
 
-CHUNK_FILE = CHUNK_DATA_DIR / "chunks.jsonl"
+CHUNK_FILE = (
+    CHUNK_DATA_DIR /
+    "chunks.jsonl"
+)
 
-# Index
-INDEX_DIR = DATA_DIR / "index"
-
-INDEX_DIR.mkdir(parents=True, exist_ok=True,)
-
-FAISS_INDEX_FILE = (INDEX_DIR / "index.faiss")
-
-CHUNK_INDEX_FILE = (INDEX_DIR / "chunk_index.jsonl")
-
+# ============================================================
 # Embedding
+# ============================================================
 
-EMBEDDING_MODEL = "intfloat/multilingual-e5-base"
+EMBEDDING_MODEL = (
+    "intfloat/multilingual-e5-base"
+)
 
 EMBEDDING_BATCH_SIZE = 128
 
-EMBEDDINGS_PATH = (PROCESSED_DATA_DIR /"embeddings.npy")
+# ============================================================
+# Vector Database (Qdrant)
+# ============================================================
 
-CHUNK_INDEX_PATH = (PROCESSED_DATA_DIR /"chunk_index.json")
+INDEX_DIR = (
+    DATA_DIR /
+    "index"
+)
+
+INDEX_DIR.mkdir(
+    parents=True,
+    exist_ok=True,
+)
+
+QDRANT_PATH = (
+    INDEX_DIR /
+    "qdrant_db"
+)
+
+QDRANT_COLLECTION = (
+    "legal_documents"
+)
