@@ -26,6 +26,7 @@ dependencies = [
 
     # Vector Database
     "faiss-cpu>=1.12.0",
+    "qdrant_client",
 
     # API
     "fastapi>=0.116.0",
