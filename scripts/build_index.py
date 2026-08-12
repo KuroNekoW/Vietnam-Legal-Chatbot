@@ -30,9 +30,10 @@ print("BUILD VECTOR DATABASE")
 print("=" * 60)
 print()
 
-# ------------------------------------------------------------
+
+# ============================================================
 # Embedding Model
-# ------------------------------------------------------------
+# ============================================================
 
 print("Loading embedding model...")
 
@@ -42,9 +43,10 @@ print(f"Device      : {model.device}")
 print(f"Dimension   : {model.dimension}")
 print()
 
-# ------------------------------------------------------------
+
+# ============================================================
 # Qdrant
-# ------------------------------------------------------------
+# ============================================================
 
 print("Connecting Qdrant...")
 
@@ -54,16 +56,46 @@ store = QdrantStore(
     database_path=QDRANT_PATH,
 )
 
-print("Loading indexed chunk ids...")
-
-indexed_chunk_ids = store.load_existing_chunk_ids()
-
-print(f"Already indexed : {len(indexed_chunk_ids):,}")
 print()
 
-# ------------------------------------------------------------
+
+# ============================================================
+# Dataset
+# ============================================================
+
+total_chunks = count_jsonl(
+    CHUNK_FILE
+)
+
+print(
+    f"Total chunks    : {total_chunks:,}"
+)
+
+# ============================================================
+# Current Qdrant Status
+# ============================================================
+
+already_indexed = store.ntotal
+
+print(
+    f"Already indexed : {already_indexed:,}"
+)
+
+remaining = max(
+    total_chunks - already_indexed,
+    0,
+)
+
+print(
+    f"Remaining       : {remaining:,}"
+)
+
+print()
+
+
+# ============================================================
 # Builder
-# ------------------------------------------------------------
+# ============================================================
 
 builder = IndexBuilder(
     embedding_model=model,
@@ -71,100 +103,233 @@ builder = IndexBuilder(
     batch_size=EMBEDDING_BATCH_SIZE,
 )
 
-# ------------------------------------------------------------
-# Dataset
-# ------------------------------------------------------------
 
-total_chunks = count_jsonl(CHUNK_FILE)
-
-remaining = total_chunks - len(indexed_chunk_ids)
-
-print(f"Total chunks : {total_chunks:,}")
-print(f"Remaining    : {remaining:,}")
-print()
+# ============================================================
+# Batch
+# ============================================================
 
 batch = []
 
-progress = tqdm(
+
+# ============================================================
+# Progress Bars
+# ============================================================
+#
+# Scanning:
+#   Số chunk đã đọc từ chunks.jsonl.
+#
+# Indexed:
+#   Số vector đã được index theo số chunk mới phát hiện.
+#
+# Indexed bắt đầu từ số vector Qdrant hiện có.
+#
+# ============================================================
+
+scan_progress = tqdm(
     total=total_chunks,
-    initial=len(indexed_chunk_ids),
-    desc="Indexing",
+    initial=0,
+    desc="Scanning",
+    unit="chunk",
+    colour="blue",
+    dynamic_ncols=True,
+)
+
+index_progress = tqdm(
+    total=total_chunks,
+    initial=already_indexed,
+    desc="Indexed ",
     unit="chunk",
     colour="green",
     dynamic_ncols=True,
 )
 
+
+# ============================================================
+# Build
+# ============================================================
+
+interrupted = False
+
 try:
 
-    for chunk in load_chunks_jsonl(CHUNK_FILE):
-
-        #
-        # Resume
-        #
-
-        if chunk.chunk_id in indexed_chunk_ids:
-            continue
+    for chunk in load_chunks_jsonl(
+        CHUNK_FILE
+    ):
 
         batch.append(chunk)
 
+        # ----------------------------------------------------
+        # Scanning progress
+        # ----------------------------------------------------
+
+        scan_progress.update(1)
+
+        # ----------------------------------------------------
+        # Batch chưa đầy
+        # ----------------------------------------------------
+
+        if len(batch) < builder.batch_size:
+            continue
+
+        # ----------------------------------------------------
+        # Resume
+        # ----------------------------------------------------
         #
-        # Batch full
+        # Chỉ lấy những chunk chưa tồn tại trong Qdrant.
+        #
+        # Không load toàn bộ chunk_id vào RAM.
         #
 
-        if len(batch) >= builder.batch_size:
+        missing = store.filter_missing(
+            batch
+        )
 
-            builder.process_batch(batch)
+        # ----------------------------------------------------
+        # Encode + Insert
+        # ----------------------------------------------------
 
-            indexed_chunk_ids.update(
-                c.chunk_id
-                for c in batch
+        if missing:
+
+            builder.process_batch(
+                missing
             )
 
-            progress.update(
-                len(batch)
+            # Chỉ tính chunk thực sự mới.
+            index_progress.update(
+                len(missing)
             )
 
-            batch.clear()
+        # ----------------------------------------------------
+        # Clear batch
+        # ----------------------------------------------------
 
-    #
-    # Remaining
-    #
+        batch.clear()
+
+
+    # ========================================================
+    # Remaining Batch
+    # ========================================================
 
     if batch:
 
-        builder.process_batch(batch)
-
-        indexed_chunk_ids.update(
-            c.chunk_id
-            for c in batch
+        missing = store.filter_missing(
+            batch
         )
 
-        progress.update(
-            len(batch)
-        )
+        if missing:
+
+            builder.process_batch(
+                missing
+            )
+
+            index_progress.update(
+                len(missing)
+            )
+
+        batch.clear()
+
 
 except KeyboardInterrupt:
 
+    interrupted = True
+
     print()
-    print("Interrupted by user.")
-    print("All processed vectors have already been stored.")
-    print("Run this script again to resume.")
+    print()
+    print("=" * 60)
+    print("BUILD INTERRUPTED")
+    print("=" * 60)
+    print()
+
+    print(
+        "Vectors already submitted to Qdrant remain stored."
+    )
+
+    print(
+        "Run this script again to resume."
+    )
 
 finally:
 
-    progress.close()
+    scan_progress.close()
+    index_progress.close()
 
-# ------------------------------------------------------------
-# Finish
-# ------------------------------------------------------------
+
+# ============================================================
+# Final Qdrant Status
+# ============================================================
+
+final_count = store.ntotal
+
+missing_count = max(
+    total_chunks - final_count,
+    0,
+)
 
 print()
 print("=" * 60)
-print("BUILD FINISHED")
+
+
+# ============================================================
+# Interrupted
+# ============================================================
+
+if interrupted:
+
+    print("BUILD INTERRUPTED")
+
+
+# ============================================================
+# Complete
+# ============================================================
+
+elif final_count >= total_chunks:
+
+    print("BUILD FINISHED")
+
+
+# ============================================================
+# Incomplete
+# ============================================================
+
+else:
+
+    print("BUILD INCOMPLETE")
+
+
 print("=" * 60)
 print()
 
-print(f"Vectors stored : {builder.vectors:,}")
-print(f"Collection     : {QDRANT_COLLECTION}")
+print(
+    f"Total chunks    : {total_chunks:,}"
+)
+
+print(
+    f"Vectors stored  : {final_count:,}"
+)
+
+print(
+    f"Vectors missing : {missing_count:,}"
+)
+
+print(
+    f"Collection      : {QDRANT_COLLECTION}"
+)
 
 print()
+
+
+# ============================================================
+# Resume Message
+# ============================================================
+
+if not interrupted and missing_count > 0:
+
+    print(
+        "Some chunks are still missing from Qdrant."
+    )
+
+    print(
+        "Run this script again to resume."
+    )
+
+    print()
