@@ -9,21 +9,13 @@ class PointSplitter:
     """
     Split one Clause into Points (Điểm).
 
-    Input
-    -----
-    Clause chunk
+    Responsibilities
+    -----------------
+    - Detect points
+    - Set point metadata
+    - Maintain character positions relative to the Article
 
-    Output
-    ------
-    Nếu không có điểm:
-        giữ nguyên.
-
-    Nếu có:
-        Khoản
-            ├── a)
-            ├── b)
-            ├── c)
-            └── ...
+    This splitter does NOT generate the final chunk_id.
     """
 
     def split(
@@ -31,12 +23,14 @@ class PointSplitter:
         clause_chunk,
     ):
 
-        #
-        # PREAMBLE
-        #
+        # ==================================================
+        # Preamble
+        # ==================================================
 
         if clause_chunk.article_no is None:
+
             yield clause_chunk
+
             return
 
         text = clause_chunk.text
@@ -45,17 +39,19 @@ class PointSplitter:
             POINT_PATTERN.finditer(text)
         )
 
-        #
-        # Không có điểm
-        #
+        # ==================================================
+        # No points
+        # ==================================================
 
         if not matches:
+
             yield clause_chunk
+
             return
 
-        #
-        # Có điểm
-        #
+        # ==================================================
+        # Points
+        # ==================================================
 
         for i, match in enumerate(matches):
 
@@ -67,39 +63,65 @@ class PointSplitter:
                 else len(text)
             )
 
-            point_text = text[start:end].strip()
+            point_text = text[
+                start:end
+            ].strip()
 
-            chunk = deepcopy(clause_chunk)
+            chunk = deepcopy(
+                clause_chunk
+            )
 
             point_no = match.group(1)
 
-            chunk.point = f"{point_no})"
+            # ------------------------------------------------
+            # Hierarchy
+            # ------------------------------------------------
+
+            chunk.point = (
+                f"{point_no})"
+            )
+
             chunk.point_no = point_no
+
+            # ------------------------------------------------
+            # Content
+            # ------------------------------------------------
 
             chunk.text = point_text
 
-            chunk.start_char = start
-            chunk.end_char = end
-
+            # ------------------------------------------------
+            # Position
             #
-            # chunk id
+            # clause_chunk.start_char is already relative
+            # to the Article.
             #
+            # Therefore convert point position to
+            # Article-relative coordinates.
+            # ------------------------------------------------
 
-            if chunk.clause_no is not None:
+            leading_offset = (
+                len(text[start:end])
+                - len(text[start:end].lstrip())
+            )
 
-                chunk.chunk_id = (
-                    f"{chunk.document_id}_"
-                    f"{chunk.article_no}"
-                    f"_c{chunk.clause_no}"
-                    f"_p{point_no}"
-                )
+            relative_start = (
+                start + leading_offset
+            )
 
-            else:
+            chunk.start_char = (
+                clause_chunk.start_char
+                + relative_start
+            )
 
-                chunk.chunk_id = (
-                    f"{chunk.document_id}_"
-                    f"{chunk.article_no}"
-                    f"_p{point_no}"
-                )
+            chunk.end_char = (
+                chunk.start_char
+                + len(point_text)
+            )
+
+            # ------------------------------------------------
+            # IMPORTANT
+            #
+            # Do NOT modify chunk.chunk_id here.
+            # ------------------------------------------------
 
             yield chunk

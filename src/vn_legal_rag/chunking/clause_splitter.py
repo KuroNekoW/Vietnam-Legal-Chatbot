@@ -9,20 +9,13 @@ class ClauseSplitter:
     """
     Split one Article into Clauses (Khoản).
 
-    Input
-    -----
-    PREAMBLE hoặc Điều
+    Responsibilities
+    -----------------
+    - Detect clauses
+    - Set clause metadata
+    - Maintain character positions relative to the Article
 
-    Output
-    ------
-    Nếu không có khoản:
-        giữ nguyên.
-
-    Nếu có khoản:
-        Điều
-            ├── Khoản 1
-            ├── Khoản 2
-            └── ...
+    This splitter does NOT generate the final chunk_id.
     """
 
     def split(
@@ -30,12 +23,14 @@ class ClauseSplitter:
         article_chunk,
     ):
 
-        #
-        # PREAMBLE không tách
-        #
+        # ==================================================
+        # Preamble
+        # ==================================================
 
         if article_chunk.article_no is None:
+
             yield article_chunk
+
             return
 
         text = article_chunk.text
@@ -44,17 +39,19 @@ class ClauseSplitter:
             CLAUSE_PATTERN.finditer(text)
         )
 
-        #
-        # Không có khoản
-        #
+        # ==================================================
+        # No clauses
+        # ==================================================
 
         if not matches:
+
             yield article_chunk
+
             return
 
-        #
-        # Có khoản
-        #
+        # ==================================================
+        # Clauses
+        # ==================================================
 
         for i, match in enumerate(matches):
 
@@ -66,23 +63,58 @@ class ClauseSplitter:
                 else len(text)
             )
 
-            clause_text = text[start:end].strip()
+            clause_text = text[
+                start:end
+            ].strip()
 
-            chunk = deepcopy(article_chunk)
+            chunk = deepcopy(
+                article_chunk
+            )
 
-            clause_no = int(match.group(1))
+            clause_no = int(
+                match.group(1)
+            )
 
-            chunk.clause = f"Khoản {clause_no}"
+            # ------------------------------------------------
+            # Hierarchy
+            # ------------------------------------------------
+
+            chunk.clause = (
+                f"Khoản {clause_no}"
+            )
+
             chunk.clause_no = clause_no
+
+            # ------------------------------------------------
+            # Content
+            # ------------------------------------------------
 
             chunk.text = clause_text
 
-            chunk.start_char = start
-            chunk.end_char = end
+            # ------------------------------------------------
+            # Position
+            #
+            # Keep coordinates relative to the Article.
+            # ------------------------------------------------
 
-            chunk.chunk_id = (
-                f"{article_chunk.chunk_id}"
-                f"_c{clause_no}"
+            leading_offset = (
+                len(text[start:end])
+                - len(text[start:end].lstrip())
             )
+
+            chunk.start_char = (
+                start + leading_offset
+            )
+
+            chunk.end_char = (
+                chunk.start_char
+                + len(clause_text)
+            )
+
+            # ------------------------------------------------
+            # IMPORTANT
+            #
+            # Do NOT modify chunk.chunk_id here.
+            # ------------------------------------------------
 
             yield chunk
