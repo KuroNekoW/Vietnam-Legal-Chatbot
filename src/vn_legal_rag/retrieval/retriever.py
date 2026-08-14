@@ -6,12 +6,18 @@ from dataclasses import dataclass
 @dataclass
 class RetrievedChunk:
     """
-    Một chunk được retrieve từ Qdrant + ChunkStore.
+    Một chunk hoàn chỉnh sau khi:
+
+    Qdrant retrieval
+        +
+    ChunkStore lookup
     """
 
     chunk_id: str
 
     score: float
+
+    source_query: str
 
     document_id: int | None
 
@@ -26,6 +32,9 @@ class RetrievedChunk:
 
     chunk_index: int | None
     sub_chunk_index: int | None
+
+    start_char: int | None
+    end_char: int | None
 
     title: str | None
 
@@ -43,15 +52,25 @@ class RetrievedChunk:
 
 class Retriever:
     """
-    Semantic retrieval pipeline.
+    Retrieval pipeline.
 
-    Question
+    Input
+    -----
+    User query
+
+    Pipeline
+    --------
+    User query
+        ↓
+    QueryNormalizer
+        ↓
+    original + normalized query
         ↓
     EmbeddingModel
         ↓
     Qdrant
         ↓
-    chunk_id
+    merge + deduplicate
         ↓
     ChunkStore
         ↓
@@ -63,81 +82,164 @@ class Retriever:
         embedding_model,
         vector_store,
         chunk_store,
+        query_normalizer=None,
     ):
 
         self.embedding_model = embedding_model
         self.vector_store = vector_store
         self.chunk_store = chunk_store
+        self.query_normalizer = query_normalizer
 
     # ==========================================================
-    # Retrieve
+    # Public retrieval
     # ==========================================================
 
     def retrieve(
         self,
         query: str,
         top_k: int = 10,
+        candidate_k: int | None = None,
     ) -> list[RetrievedChunk]:
-
-        if not query or not query.strip():
-            return []
 
         query = query.strip()
 
+        if not query:
+            return []
+
+        if candidate_k is None:
+            candidate_k = top_k
+
+        if candidate_k < top_k:
+            candidate_k = top_k
+
         # ------------------------------------------------------
-        # Query embedding
+        # Build retrieval queries
         # ------------------------------------------------------
 
-        query_vector = (
-            self.embedding_model.encode_query(
-                query
+        retrieval_queries = [
+            (
+                query,
+                query,
+            ),
+        ]
+
+        #
+        # Nếu có QueryNormalizer:
+        # thêm normalized query.
+        #
+
+        if self.query_normalizer is not None:
+
+            normalized = (
+                self.query_normalizer.normalize(
+                    query
+                )
             )
-        )
+
+            normalized_query = (
+                normalized.normalized_query
+            )
+
+            #
+            # Chỉ thêm nếu thực sự khác query gốc.
+            #
+
+            if (
+                normalized_query
+                and normalized_query.strip().lower()
+                != query.lower()
+            ):
+
+                retrieval_queries.append(
+                    (
+                        normalized_query,
+                        normalized_query,
+                    )
+                )
 
         # ------------------------------------------------------
-        # Qdrant search
+        # Search Qdrant for each query
         # ------------------------------------------------------
 
-        results = self.vector_store.search(
-            query_vector=query_vector,
-            limit=top_k,
-        )
+        candidate_map = {}
 
-        if not results:
+        for search_query, source_query in retrieval_queries:
+
+            query_vector = (
+                self.embedding_model.encode_query(
+                    search_query
+                )
+            )
+
+            results = self.vector_store.search(
+                query_vector=query_vector,
+                limit=candidate_k,
+            )
+
+            for result in results:
+
+                payload = (
+                    result.payload
+                    or {}
+                )
+
+                chunk_id = payload.get(
+                    "chunk_id"
+                )
+
+                if chunk_id is None:
+                    continue
+
+                score = float(
+                    result.score
+                )
+
+                existing = candidate_map.get(
+                    chunk_id
+                )
+
+                #
+                # Nếu cùng chunk được tìm thấy
+                # từ nhiều query, giữ score cao nhất.
+                #
+
+                if (
+                    existing is None
+                    or score > existing["score"]
+                ):
+
+                    candidate_map[chunk_id] = {
+                        "score": score,
+                        "source_query": source_query,
+                    }
+
+        if not candidate_map:
             return []
 
         # ------------------------------------------------------
-        # Extract chunk IDs
+        # Sort candidates
         # ------------------------------------------------------
 
-        chunk_ids = []
+        candidates = sorted(
+            candidate_map.items(),
+            key=lambda item: item[1]["score"],
+            reverse=True,
+        )
 
-        scores = {}
+        #
+        # Chỉ lấy số lượng cần thiết trước khi
+        # truy vấn SQLite.
+        #
 
-        for result in results:
+        candidates = candidates[:candidate_k]
 
-            payload = result.payload or {}
-
-            chunk_id = payload.get(
-                "chunk_id"
-            )
-
-            if chunk_id is None:
-                continue
-
-            chunk_ids.append(
-                chunk_id
-            )
-
-            scores[chunk_id] = float(
-                result.score
-            )
-
-        if not chunk_ids:
-            return []
+        chunk_ids = [
+            chunk_id
+            for chunk_id, _ in candidates
+        ]
 
         # ------------------------------------------------------
-        # Retrieve complete chunk records
+        # ChunkStore lookup
         # ------------------------------------------------------
 
         records = self.chunk_store.get_many(
@@ -145,12 +247,12 @@ class Retriever:
         )
 
         # ------------------------------------------------------
-        # Merge Qdrant score + chunk record
+        # Build RetrievedChunk
         # ------------------------------------------------------
 
         retrieved = []
 
-        for chunk_id in chunk_ids:
+        for chunk_id, info in candidates:
 
             record = records.get(
                 chunk_id
@@ -164,8 +266,10 @@ class Retriever:
 
                     chunk_id=chunk_id,
 
-                    score=scores[
-                        chunk_id
+                    score=info["score"],
+
+                    source_query=info[
+                        "source_query"
                     ],
 
                     document_id=record[
@@ -202,6 +306,14 @@ class Retriever:
 
                     sub_chunk_index=record[
                         "sub_chunk_index"
+                    ],
+
+                    start_char=record[
+                        "start_char"
+                    ],
+
+                    end_char=record[
+                        "end_char"
                     ],
 
                     title=record[

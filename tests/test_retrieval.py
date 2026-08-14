@@ -1,31 +1,43 @@
 from vn_legal_rag.config import (
+    CHUNK_STORE_DB,
+    LLM_MODEL_PATH,
+    LLM_CONTEXT_SIZE,
+    LLM_GPU_LAYERS,
+    LLM_MAX_TOKENS,
+    LLM_TEMPERATURE,
     QDRANT_COLLECTION,
     QDRANT_PATH,
-    CHUNK_STORE_DB,
 )
 
 from vn_legal_rag.embedding import EmbeddingModel
 
+from vn_legal_rag.llm import LocalLLM
+
+from vn_legal_rag.query import QueryNormalizer
+
 from vn_legal_rag.retrieval import (
-    QdrantStore,
     ChunkStore,
+    QdrantStore,
     Retriever,
 )
 
 
 # ============================================================
-# Query
+# Config
 # ============================================================
 
 QUERY = (
-    "Cố ý gây thương tích bao nhiêu % là đi tù"
+    "tôi mua đất giấy tay năm 2015 "
+    "giờ làm sổ đỏ được không"
 )
 
 TOP_K = 10
 
+CANDIDATE_K = 20
+
 
 # ============================================================
-# Embedding
+# Main
 # ============================================================
 
 print()
@@ -34,16 +46,101 @@ print("TEST RETRIEVAL")
 print("=" * 70)
 print()
 
-print("Loading embedding model...")
 
-model = EmbeddingModel()
+# ============================================================
+# Local LLM
+# ============================================================
+
+print("Loading local LLM...")
+
+llm = LocalLLM(
+
+    model_path=LLM_MODEL_PATH,
+
+    n_ctx=LLM_CONTEXT_SIZE,
+
+    n_gpu_layers=LLM_GPU_LAYERS,
+
+    temperature=LLM_TEMPERATURE,
+
+    max_tokens=LLM_MAX_TOKENS,
+
+)
+
+normalizer = QueryNormalizer(
+    llm=llm
+)
+
+print()
+
+
+# ============================================================
+# Query normalization
+# ============================================================
 
 print(
-    f"Device    : {model.device}"
+    "Original query:"
 )
 
 print(
-    f"Dimension : {model.dimension}"
+    QUERY
+)
+
+print()
+
+normalized = normalizer.normalize(
+    QUERY
+)
+
+print(
+    "Normalized query:"
+)
+
+print(
+    normalized.normalized_query
+)
+
+print()
+
+print(
+    "Legal terms:"
+)
+
+for term in normalized.legal_terms:
+
+    print(
+        f"  - {term}"
+    )
+
+print()
+
+print(
+    "Constraints:"
+)
+
+for constraint in normalized.constraints:
+
+    print(
+        f"  - {constraint}"
+    )
+
+print()
+
+
+# ============================================================
+# Embedding Model
+# ============================================================
+
+print("Loading embedding model...")
+
+embedding_model = EmbeddingModel()
+
+print(
+    f"Device    : {embedding_model.device}"
+)
+
+print(
+    f"Dimension : {embedding_model.dimension}"
 )
 
 print()
@@ -56,9 +153,13 @@ print()
 print("Connecting Qdrant...")
 
 qdrant = QdrantStore(
+
     collection_name=QDRANT_COLLECTION,
-    dimension=model.dimension,
+
+    dimension=embedding_model.dimension,
+
     database_path=QDRANT_PATH,
+
 )
 
 print(
@@ -90,25 +191,36 @@ print()
 # ============================================================
 
 retriever = Retriever(
-    embedding_model=model,
+
+    embedding_model=embedding_model,
+
     vector_store=qdrant,
+
     chunk_store=chunk_store,
+
+    query_normalizer=normalizer,
+
 )
 
 
 # ============================================================
-# Search
+# Retrieval
 # ============================================================
 
 print(
-    f"Query: {QUERY}"
+    "Running retrieval..."
 )
 
 print()
 
 results = retriever.retrieve(
+
     query=QUERY,
+
     top_k=TOP_K,
+
+    candidate_k=CANDIDATE_K,
+
 )
 
 
@@ -117,10 +229,11 @@ results = retriever.retrieve(
 # ============================================================
 
 print(
-    f"Retrieved: {len(results)}"
+    f"Retrieved : {len(results)}"
 )
 
 print()
+
 
 for i, result in enumerate(
     results,
@@ -135,6 +248,10 @@ for i, result in enumerate(
 
     print(
         f"Score       : {result.score:.6f}"
+    )
+
+    print(
+        f"Source query: {result.source_query}"
     )
 
     print(
@@ -161,6 +278,14 @@ for i, result in enumerate(
         f"Point       : {result.point_no}"
     )
 
+    print(
+        f"Chunk index : {result.chunk_index}"
+    )
+
+    print(
+        f"Sub chunk   : {result.sub_chunk_index}"
+    )
+
     print()
 
     print(
@@ -171,11 +296,12 @@ for i, result in enumerate(
 
 
 # ============================================================
-# Close
+# Cleanup
 # ============================================================
 
 chunk_store.close()
 
 print("=" * 70)
-print("DONE")
+print("TEST FINISHED")
 print("=" * 70)
+print()

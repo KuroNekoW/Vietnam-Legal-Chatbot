@@ -90,3 +90,21 @@ RETRIEVAL_DIR.mkdir(
 CHUNK_STORE_DB = (
     RETRIEVAL_DIR / "chunk_store.db"
 )
+
+# ============================================================
+# LLM
+# ============================================================
+
+LLM_MODEL_PATH = (
+    PROJECT_ROOT
+    / "models"
+    / "Qwen3-4B-Q4_K_M.gguf"
+)
+
+LLM_CONTEXT_SIZE = 4096
+
+LLM_GPU_LAYERS = -1
+
+LLM_MAX_TOKENS = 512
+
+LLM_TEMPERATURE = 0.0
