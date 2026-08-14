@@ -167,17 +167,15 @@ class QdrantStore:
         limit: int = 10,
     ):
 
-        return self.client.search(
-
+        result = self.client.query_points(
             collection_name=self.collection_name,
-
-            query_vector=query_vector.tolist(),
-
+            query=query_vector.tolist(),
             limit=limit,
-
             with_payload=True,
-
+            with_vectors=False,
         )
+
+        return result.points
 
     # ----------------------------------------------------
     # Resume

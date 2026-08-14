@@ -75,3 +75,18 @@ QDRANT_PATH = (
 QDRANT_COLLECTION = (
     "legal_documents"
 )
+
+# ============================================================
+# Retrieval
+# ============================================================
+
+RETRIEVAL_DIR = DATA_DIR / "retrieval"
+
+RETRIEVAL_DIR.mkdir(
+    parents=True,
+    exist_ok=True,
+)
+
+CHUNK_STORE_DB = (
+    RETRIEVAL_DIR / "chunk_store.db"
+)

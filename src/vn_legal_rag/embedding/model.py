@@ -15,8 +15,9 @@ class EmbeddingModel:
     Responsibilities
     ----------------
     - Load embedding model
-    - Encode one text
-    - Encode batch
+    - Encode query
+    - Encode one passage
+    - Encode batch of passages
     """
 
     def __init__(
@@ -35,12 +36,17 @@ class EmbeddingModel:
 
         self.device = device
 
-        print(f"Embedding device : {device}")
-        print(f"Embedding model  : {model_name}")
+        print(
+            f"Embedding device : {device}"
+        )
 
-        #
+        print(
+            f"Embedding model  : {model_name}"
+        )
+
+        # ----------------------------------------------------
         # TensorFloat32
-        #
+        # ----------------------------------------------------
 
         if device == "cuda":
 
@@ -56,9 +62,9 @@ class EmbeddingModel:
                     "high"
                 )
 
-        #
+        # ----------------------------------------------------
         # Load model
-        #
+        # ----------------------------------------------------
 
         self.model_name = model_name
 
@@ -68,18 +74,20 @@ class EmbeddingModel:
             trust_remote_code=True,
         )
 
+    # ========================================================
+    # Properties
+    # ========================================================
+
     @property
-    def dimension(
-        self,
-    ) -> int:
+    def dimension(self) -> int:
 
-        return self.model.get_sentence_embedding_dimension()
+        return (
+            self.model.get_sentence_embedding_dimension()
+        )
 
-    #
-    # ---------------------------------------------------------
+    # ========================================================
     # Internal
-    # ---------------------------------------------------------
-    #
+    # ========================================================
 
     def _prepare_text(
         self,
@@ -87,25 +95,43 @@ class EmbeddingModel:
         text_type: str,
     ) -> str:
 
-        #
-        # E5 requires prefixes
-        #
-
         if "e5" in self.model_name.lower():
 
             return f"{text_type}: {text}"
 
-        #
-        # Other embedding models
-        #
-
         return text
 
-    #
-    # ---------------------------------------------------------
-    # Encode single
-    # ---------------------------------------------------------
-    #
+    # ========================================================
+    # Query
+    # ========================================================
+
+    def encode_query(
+        self,
+        query: str,
+    ) -> np.ndarray:
+
+        return self.encode(
+            query,
+            text_type="query",
+        )
+
+    # ========================================================
+    # Single passage
+    # ========================================================
+
+    def encode_passage(
+        self,
+        text: str,
+    ) -> np.ndarray:
+
+        return self.encode(
+            text,
+            text_type="passage",
+        )
+
+    # ========================================================
+    # Generic single encode
+    # ========================================================
 
     def encode(
         self,
@@ -125,11 +151,9 @@ class EmbeddingModel:
             show_progress_bar=False,
         )
 
-    #
-    # ---------------------------------------------------------
-    # Encode batch
-    # ---------------------------------------------------------
-    #
+    # ========================================================
+    # Batch passages
+    # ========================================================
 
     def encode_batch(
         self,

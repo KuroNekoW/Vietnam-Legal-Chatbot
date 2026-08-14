@@ -9,13 +9,15 @@ class DocumentFilter:
 
     ALLOWED_TYPES = {
 
-        "quyết định",
-        # "công văn",
-        # "nghị quyết",
-        # "thông tư",
+        "hiến pháp",
+        "luật",
+        "văn bản hợp nhất",
+        "pháp lệnh",
+        "nghị định",
+        "nghị quyết",
 
     }
-
+ 
     @classmethod
     def check(
         cls,
