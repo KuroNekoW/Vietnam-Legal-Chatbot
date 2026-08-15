@@ -2,6 +2,7 @@ from .qdrant_store import QdrantStore
 from .index_builder import IndexBuilder
 from .chunk_store import ChunkStore
 from .retriever import Retriever, RetrievedChunk
+from .reranker import Reranker
 
 
 __all__ = [
@@ -10,4 +11,5 @@ __all__ = [
     "ChunkStore",
     "Retriever",
     "RetrievedChunk",
+    "Reranker",
 ]

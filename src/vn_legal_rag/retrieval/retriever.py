@@ -49,6 +49,8 @@ class RetrievedChunk:
 
     text: str
 
+    rerank_score: float | None = None
+
 
 class Retriever:
     """

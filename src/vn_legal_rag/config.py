@@ -108,3 +108,15 @@ LLM_GPU_LAYERS = -1
 LLM_MAX_TOKENS = 512
 
 LLM_TEMPERATURE = 0.0
+
+# ============================================================
+# Reranker
+# ============================================================
+
+RERANKER_MODEL = "AITeamVN/Vietnamese_Reranker"
+
+RERANKER_DEVICE = "cuda"
+
+RERANKER_BATCH_SIZE = 8
+
+RERANKER_MAX_LENGTH = 2304

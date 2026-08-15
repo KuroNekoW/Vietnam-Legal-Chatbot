@@ -14,8 +14,6 @@ class DocumentFilter:
         "văn bản hợp nhất",
         "pháp lệnh",
         "nghị định",
-        "nghị quyết",
-
     }
  
     @classmethod
