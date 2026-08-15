@@ -7,6 +7,6 @@ services:
       - "6333:6333" # REST API & Dashboard
       - "6334:6334" # gRPC API
     volumes:
-      - ./qdrant_storage:/qdrant/storage
+      - ./data/qdrant_storage:/qdrant/storage
     environment:
       - QDRANT__SERVICE__ENABLE_CORS=true

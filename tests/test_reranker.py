@@ -23,14 +23,23 @@ from vn_legal_rag.retrieval import (
 )
 
 
+# ============================================================
+# Config
+# ============================================================
+
 QUERY = (
     "tôi mua đất giấy tay năm 2015 "
     "giờ làm sổ đỏ được không"
 )
 
 CANDIDATE_K = 30
+
 RERANK_TOP_K = 8
 
+
+# ============================================================
+# Main
+# ============================================================
 
 print()
 print("=" * 70)
@@ -57,15 +66,75 @@ normalizer = QueryNormalizer(
     llm
 )
 
+print()
+
+
+# ============================================================
+# Normalize query
+# ============================================================
+
+print("-" * 70)
+print("QUERY NORMALIZATION")
+print("-" * 70)
+
+print()
+print("Original query:")
+print(QUERY)
+
+normalized = normalizer.normalize(
+    QUERY
+)
+
+normalized_query = (
+    normalized.normalized_query
+)
+
+print()
+print("Normalized query:")
+print(normalized_query)
+
+print()
+print("Legal terms:")
+
+for term in normalized.legal_terms:
+
+    print(
+        f"  - {term}"
+    )
+
+print()
+print("Constraints:")
+
+for constraint in normalized.constraints:
+
+    print(
+        f"  - {constraint}"
+    )
+
+print()
+
 
 # ============================================================
 # Embedding
 # ============================================================
 
+print("-" * 70)
+print("EMBEDDING MODEL")
+print("-" * 70)
+
 print()
 print("Loading embedding model...")
 
 embedding_model = EmbeddingModel()
+
+print()
+print(
+    f"Device    : {embedding_model.device}"
+)
+
+print(
+    f"Dimension : {embedding_model.dimension}"
+)
 
 print()
 
@@ -74,6 +143,11 @@ print()
 # Qdrant
 # ============================================================
 
+print("-" * 70)
+print("QDRANT")
+print("-" * 70)
+
+print()
 print("Connecting Qdrant...")
 
 qdrant = QdrantStore(
@@ -82,6 +156,7 @@ qdrant = QdrantStore(
     database_path=QDRANT_PATH,
 )
 
+print()
 print(
     f"Vectors : {qdrant.ntotal:,}"
 )
@@ -92,6 +167,12 @@ print()
 # ============================================================
 # Chunk Store
 # ============================================================
+
+print("-" * 70)
+print("CHUNK STORE")
+print("-" * 70)
+
+print()
 
 chunk_store = ChunkStore(
     CHUNK_STORE_DB
@@ -120,6 +201,11 @@ retriever = Retriever(
 # Retrieval
 # ============================================================
 
+print("-" * 70)
+print("RETRIEVAL")
+print("-" * 70)
+
+print()
 print("Running retrieval...")
 
 candidates = retriever.retrieve(
@@ -127,6 +213,8 @@ candidates = retriever.retrieve(
     top_k=CANDIDATE_K,
     candidate_k=CANDIDATE_K,
 )
+
+print()
 
 print(
     f"Candidates : {len(candidates)}"
@@ -136,29 +224,119 @@ print()
 
 
 # ============================================================
+# BEFORE RERANK
+# ============================================================
+
+print()
+print("=" * 70)
+print("BEFORE RERANK")
+print("=" * 70)
+print()
+
+for i, chunk in enumerate(
+    candidates,
+    start=1,
+):
+
+    print(
+        f"#{i:02d}"
+    )
+
+    print(
+        f"Qdrant score : "
+        f"{chunk.score:.6f}"
+    )
+
+    print(
+        f"Source query : "
+        f"{chunk.source_query}"
+    )
+
+    print(
+        f"Chunk ID     : "
+        f"{chunk.chunk_id}"
+    )
+
+    print(
+        f"Document ID  : "
+        f"{chunk.document_id}"
+    )
+
+    print(
+        f"Article      : "
+        f"{chunk.article_no}"
+    )
+
+    print(
+        f"Clause       : "
+        f"{chunk.clause_no}"
+    )
+
+    print(
+        f"Point        : "
+        f"{chunk.point_no}"
+    )
+
+    print(
+        f"Title        : "
+        f"{chunk.title}"
+    )
+
+    preview = (
+        chunk.text
+        .replace("\n", " ")
+        .strip()
+    )
+
+    if len(preview) > 400:
+
+        preview = (
+            preview[:400]
+            + "..."
+        )
+
+    print(
+        f"Text         : "
+        f"{preview}"
+    )
+
+    print(
+        "-" * 70
+    )
+
+
+# ============================================================
 # Reranker
 # ============================================================
+
+print()
+print("=" * 70)
+print("RERANKER")
+print("=" * 70)
+print()
 
 reranker = Reranker()
 
 print()
 
-print("Running reranking...")
+print(
+    "Reranking with normalized query..."
+)
 
 results = reranker.rerank(
-    query=QUERY,
+    query=normalized_query,
     chunks=candidates,
     top_k=RERANK_TOP_K,
 )
 
 
 # ============================================================
-# Results
+# AFTER RERANK
 # ============================================================
 
 print()
 print("=" * 70)
-print("RERANKED RESULTS")
+print("AFTER RERANK")
 print("=" * 70)
 print()
 
@@ -167,49 +345,52 @@ for i, chunk in enumerate(
     start=1,
 ):
 
-    print("-" * 70)
-
     print(
         f"#{i}"
     )
 
     print(
-        f"Qdrant score   : "
-        f"{chunk.score:.6f}"
-    )
-
-    print(
-        f"Rerank score   : "
+        f"Rerank score : "
         f"{chunk.rerank_score:.6f}"
     )
 
     print(
-        f"Chunk ID       : "
+        f"Qdrant score : "
+        f"{chunk.score:.6f}"
+    )
+
+    print(
+        f"Source query : "
+        f"{chunk.source_query}"
+    )
+
+    print(
+        f"Chunk ID     : "
         f"{chunk.chunk_id}"
     )
 
     print(
-        f"Document ID    : "
+        f"Document ID  : "
         f"{chunk.document_id}"
     )
 
     print(
-        f"Article        : "
+        f"Article      : "
         f"{chunk.article_no}"
     )
 
     print(
-        f"Clause         : "
+        f"Clause       : "
         f"{chunk.clause_no}"
     )
 
     print(
-        f"Point          : "
+        f"Point        : "
         f"{chunk.point_no}"
     )
 
     print(
-        f"Title          : "
+        f"Title        : "
         f"{chunk.title}"
     )
 
@@ -220,10 +401,17 @@ for i, chunk in enumerate(
     )
 
     print()
+    print("-" * 70)
 
+
+# ============================================================
+# Cleanup
+# ============================================================
 
 chunk_store.close()
 
+print()
 print("=" * 70)
 print("TEST FINISHED")
 print("=" * 70)
+print()

@@ -10,6 +10,7 @@ requires-python = ">=3.11"
 
 dependencies = [
     "transformers",
+    "huggingface_hub",
 
     # Crawling
     "playwright>=1.54.0",
