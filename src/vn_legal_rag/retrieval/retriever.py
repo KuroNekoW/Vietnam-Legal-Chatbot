@@ -194,8 +194,8 @@ class Retriever:
                 enriched_query = (
                     self._build_enriched_query(
                         normalized_query=normalized_query,
+                        question_intent=normalized.question_intent,
                         keywords=normalized.keywords,
-                        legal_terms=normalized.legal_terms,
                         constraints=normalized.constraints,
                         temporal_constraints=normalized.temporal_constraints,
                     )
@@ -521,18 +521,11 @@ class Retriever:
     @staticmethod
     def _build_enriched_query(
         normalized_query: str,
+        question_intent: str,
         keywords: list[str],
-        legal_terms: list[str],
         constraints: list[str],
         temporal_constraints: list[str],
     ) -> str:
-        """
-        Tạo query dành riêng cho embedding.
-
-        Không biến thành một đoạn văn quá dài.
-        Chỉ bổ sung những tín hiệu retrieval quan trọng.
-        """
-
         parts = [
             normalized_query.strip()
         ]
@@ -541,10 +534,14 @@ class Retriever:
         # Merge keyword sources nhưng giữ thứ tự.
         #
 
-        retrieval_terms = []
+        if question_intent:
+            parts.append(
+                f"Ý định pháp lý: {question_intent.strip()}"
+            )
+
+        retrieval_terms: list[str] = []
 
         for term in keywords:
-
             term = term.strip()
 
             if (
@@ -556,33 +553,9 @@ class Retriever:
                 }
             ):
 
-                retrieval_terms.append(
-                    term
-                )
-
-        for term in legal_terms:
-
-            term = term.strip()
-
-            if (
-                term
-                and term.casefold()
-                not in {
-                    x.casefold()
-                    for x in retrieval_terms
-                }
-            ):
-
-                retrieval_terms.append(
-                    term
-                )
-
-        #
-        # Constraints
-        #
+                retrieval_terms.append(term)
 
         for constraint in constraints:
-
             constraint = constraint.strip()
 
             if (
@@ -594,16 +567,9 @@ class Retriever:
                 }
             ):
 
-                retrieval_terms.append(
-                    constraint
-                )
-
-        #
-        # Temporal constraints phải được giữ lại.
-        #
+                retrieval_terms.append(constraint)
 
         for temporal in temporal_constraints:
-
             temporal = temporal.strip()
 
             if (
@@ -615,17 +581,12 @@ class Retriever:
                 }
             ):
 
-                retrieval_terms.append(
-                    temporal
-                )
+                retrieval_terms.append(temporal)
 
         if retrieval_terms:
-
             parts.append(
                 "Từ khóa pháp lý: "
-                + "; ".join(
-                    retrieval_terms
-                )
+                + "; ".join(retrieval_terms)
             )
 
         return " ".join(

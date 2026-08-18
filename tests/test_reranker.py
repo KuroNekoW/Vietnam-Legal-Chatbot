@@ -93,21 +93,40 @@ print("Normalized query:")
 print(normalized_query)
 
 print()
-print("Legal terms:")
+print("Question intent:")
 
-for term in normalized.legal_terms:
+print(
+    f"  {normalized.question_intent}"
+)
+
+print()
+
+print("Keywords:")
+
+for keyword in normalized.keywords:
 
     print(
-        f"  - {term}"
+        f"  - {keyword}"
     )
 
 print()
+
 print("Constraints:")
 
 for constraint in normalized.constraints:
 
     print(
         f"  - {constraint}"
+    )
+
+print()
+
+print("Temporal constraints:")
+
+for temporal in normalized.temporal_constraints:
+
+    print(
+        f"  - {temporal}"
     )
 
 print()
@@ -354,6 +373,12 @@ print("AFTER RERANK")
 print("=" * 70)
 print()
 
+print(
+    f"Results : {len(results)}"
+)
+
+print()
+
 for i, chunk in enumerate(
     results,
     start=1,
@@ -389,7 +414,7 @@ for i, chunk in enumerate(
     )
 
     print(
-        f"Article      : "
+        f"Article no   : "
         f"{chunk.article_no}"
     )
 
@@ -399,7 +424,7 @@ for i, chunk in enumerate(
     )
 
     print(
-        f"Clause       : "
+        f"Clause no    : "
         f"{chunk.clause_no}"
     )
 
@@ -409,7 +434,7 @@ for i, chunk in enumerate(
     )
 
     print(
-        f"Point        : "
+        f"Point no     : "
         f"{chunk.point_no}"
     )
 
@@ -432,6 +457,100 @@ for i, chunk in enumerate(
     print()
     print("-" * 70)
 
+
+# ============================================================
+# Deduplication report
+# ============================================================
+
+duplicate_groups = (
+    reranker.last_duplicate_groups
+)
+
+print()
+print("=" * 70)
+print("DEDUPLICATION REPORT")
+print("=" * 70)
+print()
+
+print(
+    f"Duplicate groups removed : "
+    f"{len(duplicate_groups)}"
+)
+
+print()
+
+for i, group in enumerate(
+    duplicate_groups,
+    start=1,
+):
+
+    kept = group["kept"]
+    removed = group["removed"]
+
+    print(
+        f"GROUP #{i}"
+    )
+
+    print(
+        f"Kept    : "
+        f"{kept.document_id} | "
+        f"{kept.title}"
+    )
+
+    print(
+        f"Removed : "
+        f"{removed.document_id} | "
+        f"{removed.title}"
+    )
+
+    print(
+        f"Article no: "
+        f"{kept.article_no}"
+    )
+
+    print(
+        f"Article   : "
+        f"{kept.article}"
+    )
+
+    print(
+        f"Clause no : "
+        f"{kept.clause_no}"
+    )
+
+    print(
+        f"Clause    : "
+        f"{kept.clause}"
+    )
+
+    print(
+        f"Point no  : "
+        f"{kept.point_no}"
+    )
+
+    print(
+        f"Point     : "
+        f"{kept.point}"
+    )
+
+    print(
+        f"Issuance date    : "
+        f"{chunk.issuance_date}"
+    )
+
+    print()
+
+    print(
+        "Text:"
+    )
+
+    print(
+        kept.text
+    )
+
+    print(
+        "-" * 70
+    )
 
 # ============================================================
 # Cleanup

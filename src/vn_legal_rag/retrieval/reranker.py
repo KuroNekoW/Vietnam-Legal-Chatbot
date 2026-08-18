@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import re
+import unicodedata
+
 import torch
 from transformers import (
     AutoModelForSequenceClassification,
@@ -17,6 +20,18 @@ from vn_legal_rag.config import (
 class Reranker:
     """
     Vietnamese cross-encoder reranker.
+
+    Pipeline
+    --------
+    Qdrant candidates
+        ↓
+    Cross-encoder scoring
+        ↓
+    Sort by rerank score
+        ↓
+    Deduplicate equivalent chunks
+        ↓
+    Top-K
     """
 
     def __init__(
@@ -45,18 +60,27 @@ class Reranker:
             f"Reranker device   : {device}"
         )
 
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            model_name,
+        self.tokenizer = (
+            AutoTokenizer.from_pretrained(
+                model_name,
+            )
         )
 
-        self.model = AutoModelForSequenceClassification.from_pretrained(
-            model_name,
+        self.model = (
+            AutoModelForSequenceClassification
+            .from_pretrained(
+                model_name,
+            )
         )
 
         self.model.to(device)
         self.model.eval()
 
         print("Reranker loaded.")
+
+    # =========================================================
+    # Rerank
+    # =========================================================
 
     def rerank(
         self,
@@ -74,6 +98,10 @@ class Reranker:
             return []
 
         scored = []
+
+        # -----------------------------------------------------
+        # Score candidates in batches
+        # -----------------------------------------------------
 
         for start in range(
             0,
@@ -102,7 +130,9 @@ class Reranker:
             )
 
             inputs = {
-                key: value.to(self.device)
+                key: value.to(
+                    self.device
+                )
                 for key, value in inputs.items()
             }
 
@@ -134,15 +164,243 @@ class Reranker:
                     chunk
                 )
 
+        # -----------------------------------------------------
+        # Sort by reranker score
+        # -----------------------------------------------------
+
         scored.sort(
             key=lambda chunk: (
                 chunk.rerank_score
+                if chunk.rerank_score is not None
+                else float("-inf")
             ),
             reverse=True,
         )
 
+        # -----------------------------------------------------
+        # Deduplicate
+        # -----------------------------------------------------
+
+        scored, duplicate_groups = (
+            self._deduplicate(
+                scored
+            )
+        )
+
+        # -----------------------------------------------------
+        # Top-K AFTER dedup
+        # -----------------------------------------------------
+
         if top_k is not None:
 
-            scored = scored[:top_k]
+            scored = scored[
+                :top_k
+            ]
+
+        # Store information so the test/debug code can inspect it.
+        self.last_duplicate_groups = (
+            duplicate_groups
+        )
 
         return scored
+
+    # =========================================================
+    # Deduplication
+    # =========================================================
+
+    def _deduplicate(
+        self,
+        chunks,
+    ):
+        """
+        Loại các chunk có cùng nội dung pháp lý.
+
+        Signature không chứa document_id hoặc title,
+        vì nhiều phiên bản văn bản có thể chứa cùng một
+        quy định pháp lý.
+
+        Ví dụ:
+
+            VBHN 2025
+            VBHN 2026
+            Bộ luật 2019
+
+        cùng Điều 36 Khoản 3 và cùng text
+        → chỉ giữ một representative.
+        """
+
+        seen = {}
+
+        duplicate_groups = []
+
+        for chunk in chunks:
+
+            signature = (
+                chunk.article_no,
+                chunk.clause_no,
+                chunk.point_no,
+                self._normalize_text(
+                    chunk.text
+                ),
+            )
+
+            existing = seen.get(
+                signature
+            )
+
+            # -------------------------------------------------
+            # First occurrence
+            # -------------------------------------------------
+
+            if existing is None:
+
+                seen[signature] = chunk
+
+                continue
+
+            # -------------------------------------------------
+            # Duplicate
+            # -------------------------------------------------
+
+            winner, duplicate = (
+                self._choose_representative(
+                    existing,
+                    chunk,
+                )
+            )
+
+            seen[signature] = winner
+
+            duplicate_groups.append(
+                {
+                    "kept": winner,
+                    "removed": duplicate,
+                }
+            )
+
+        #
+        # Important:
+        # giữ đúng thứ tự score sau dedup.
+        #
+
+        deduplicated = sorted(
+            seen.values(),
+            key=lambda chunk: (
+                chunk.rerank_score
+                if chunk.rerank_score is not None
+                else float("-inf")
+            ),
+            reverse=True,
+        )
+
+        return (
+            deduplicated,
+            duplicate_groups,
+        )
+
+    # =========================================================
+    # Representative selection
+    # =========================================================
+
+    @staticmethod
+    def _choose_representative(
+        first,
+        second,
+    ):
+        """
+        Chọn chunk đại diện.
+
+        Priority:
+        1. rerank score cao hơn
+        2. issuance_date mới hơn nếu score bằng nhau
+        3. giữ first nếu vẫn bằng nhau
+        """
+
+        first_score = (
+            first.rerank_score
+            if first.rerank_score is not None
+            else float("-inf")
+        )
+
+        second_score = (
+            second.rerank_score
+            if second.rerank_score is not None
+            else float("-inf")
+        )
+
+        # -----------------------------------------------------
+        # Higher rerank score
+        # -----------------------------------------------------
+
+        if second_score > first_score:
+
+            return (
+                second,
+                first,
+            )
+
+        if first_score > second_score:
+
+            return (
+                first,
+                second,
+            )
+
+        # -----------------------------------------------------
+        # Same rerank score
+        #
+        # Prefer newer issuance date if available.
+        # Dates in the current dataset are strings, so
+        # lexical comparison works for ISO-like dates.
+        # -----------------------------------------------------
+
+        first_date = (
+            first.issuance_date
+            or ""
+        )
+
+        second_date = (
+            second.issuance_date
+            or ""
+        )
+
+        if second_date > first_date:
+
+            return (
+                second,
+                first,
+            )
+
+        return (
+            first,
+            second,
+        )
+
+    # =========================================================
+    # Text normalization
+    # =========================================================
+
+    @staticmethod
+    def _normalize_text(
+        text: str,
+    ) -> str:
+        """
+        Chuẩn hóa text trước khi so sánh duplicate.
+
+        Không thay đổi dữ liệu gốc.
+        """
+
+        text = unicodedata.normalize(
+            "NFKC",
+            text,
+        )
+
+        text = text.casefold()
+
+        text = re.sub(
+            r"\s+",
+            " ",
+            text,
+        )
+
+        return text.strip()
