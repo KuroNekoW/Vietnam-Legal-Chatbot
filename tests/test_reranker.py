@@ -28,8 +28,7 @@ from vn_legal_rag.retrieval import (
 # ============================================================
 
 QUERY = (
-    "tôi mua đất giấy tay năm 2015 "
-    "giờ làm sổ đỏ được không"
+    "trốn khỏi hiện trường sau khi gây tai nạn có đi tù không"
 )
 
 CANDIDATE_K = 30
