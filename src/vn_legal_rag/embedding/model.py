@@ -72,6 +72,7 @@ class EmbeddingModel:
             model_name,
             device=device,
             trust_remote_code=True,
+            model_kwargs={"torch_dtype": torch.float16},
         )
 
     # ========================================================

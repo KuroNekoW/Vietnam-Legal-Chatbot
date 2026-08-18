@@ -1,3 +1,5 @@
+transformers
+huggingface_hub
 playwright>=1.54.0
 beautifulsoup4>=4.13.0
 requests>=2.32.0
@@ -7,7 +9,9 @@ pyarrow>=21.0.0
 pandas>=2.3.0
 numpy>=2.3.0
 sentence-transformers>=5.0.0
-faiss-cpu>=1.12.0
+qdrant-client
+sentencepiece
+tiktoken
 fastapi>=0.116.0
 uvicorn[standard]>=0.35.0
 pydantic>=2.11.0

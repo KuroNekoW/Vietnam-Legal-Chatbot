@@ -51,7 +51,7 @@ EMBEDDING_MODEL = (
     "intfloat/multilingual-e5-base"
 )
 
-EMBEDDING_BATCH_SIZE = 128
+EMBEDDING_BATCH_SIZE = 256
 
 # ============================================================
 # Vector Database (Qdrant)
