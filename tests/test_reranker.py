@@ -28,7 +28,7 @@ from vn_legal_rag.retrieval import (
 # ============================================================
 
 QUERY = (
-    "trốn khỏi hiện trường sau khi gây tai nạn có đi tù không"
+    "Đơn phương chấm dứt hợp đồng lao động, người lao động phải báo trước bao nhiêu ngày?"
 )
 
 CANDIDATE_K = 30
@@ -267,13 +267,28 @@ for i, chunk in enumerate(
     )
 
     print(
+        f"Article      : "
+        f"{chunk.article}"
+    )
+
+    print(
         f"Clause       : "
         f"{chunk.clause_no}"
     )
 
     print(
+        f"Clause       : "
+        f"{chunk.clause}"
+    )
+
+    print(
         f"Point        : "
         f"{chunk.point_no}"
+    )
+
+    print(
+        f"Point        : "
+        f"{chunk.point}"
     )
 
     print(
@@ -379,13 +394,28 @@ for i, chunk in enumerate(
     )
 
     print(
+        f"Article      : "
+        f"{chunk.article}"
+    )
+
+    print(
         f"Clause       : "
         f"{chunk.clause_no}"
     )
 
     print(
+        f"Clause       : "
+        f"{chunk.clause}"
+    )
+
+    print(
         f"Point        : "
         f"{chunk.point_no}"
+    )
+
+    print(
+        f"Point        : "
+        f"{chunk.point}"
     )
 
     print(
