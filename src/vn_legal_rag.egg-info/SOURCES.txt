@@ -12,6 +12,9 @@ src/vn_legal_rag/chunking/legal_splitter.py
 src/vn_legal_rag/chunking/length_splitter.py
 src/vn_legal_rag/chunking/point_splitter.py
 src/vn_legal_rag/chunking/regex.py
+src/vn_legal_rag/context/__init__.py
+src/vn_legal_rag/context/context_builder.py
+src/vn_legal_rag/context/models.py
 src/vn_legal_rag/embedding/__init__.py
 src/vn_legal_rag/embedding/model.py
 src/vn_legal_rag/ingestion/__init__.py
@@ -41,6 +44,7 @@ src/vn_legal_rag/utils/io.py
 tests/test_chunk_statistic.py
 tests/test_chunker.py
 tests/test_clause_splitter.py
+tests/test_context_builder.py
 tests/test_document.py
 tests/test_embedding.py
 tests/test_faiss_index.py
