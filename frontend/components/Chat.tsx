@@ -14,6 +14,8 @@ import {
 
 import ChatMessage from "./ChatMessage";
 import DebugPanel from "./DebugPanel";
+import SealMark from "./SealMark";
+import ThemeToggle from "./ThemeToggle";
 
 interface ChatHistoryItem {
   id: number;
@@ -21,6 +23,10 @@ interface ChatHistoryItem {
   content?: string;
   answer?: ChatResponse["answer"];
 }
+
+const EXAMPLE_QUESTIONS = [
+  "Goi y gi gio :((",
+];
 
 export default function Chat() {
   const [input, setInput] = useState("");
@@ -120,74 +126,64 @@ export default function Chat() {
     <main className="chat-page">
       <div className="chat-shell">
         <header className="chat-header">
-          <div>
-            <div className="brand-title">
-              🇻🇳 Vietnam Legal Assistant
-            </div>
+          <div className="brand">
+            <SealMark className="brand-seal" />
 
-            <div className="brand-subtitle">
-              Vietnamese Legal RAG
+            <div className="brand-text">
+              <div className="brand-title">
+                Trợ lý Pháp luật
+              </div>
+
+              <div className="brand-subtitle">
+                Tra cứu văn bản quy phạm pháp luật Việt Nam
+              </div>
             </div>
           </div>
 
-          {history.length > 0 && (
-            <button
-              type="button"
-              className="clear-button"
-              onClick={clearChat}
-            >
-              Xóa cuộc trò chuyện
-            </button>
-          )}
+          <div className="header-actions">
+            {history.length > 0 && (
+              <button
+                type="button"
+                className="clear-button"
+                onClick={clearChat}
+              >
+                Xóa hội thoại
+              </button>
+            )}
+
+            <ThemeToggle />
+          </div>
         </header>
 
         <section className="chat-body">
           {history.length === 0 ? (
             <div className="welcome">
-              <div className="welcome-icon">
-                ⚖️
-              </div>
+              <SealMark className="welcome-seal" />
 
               <h1>
-                Hỏi về pháp luật Việt Nam
+                Tra cứu quy định pháp luật
               </h1>
 
               <p>
-                Đặt câu hỏi bằng tiếng Việt.
-                Hệ thống sẽ tìm kiếm và xếp hạng
-                các quy định liên quan trước khi
-                tạo câu trả lời.
+                Đặt câu hỏi bằng tiếng Việt. Hệ thống tìm kiếm
+                và xếp hạng các quy định liên quan trước khi
+                soạn câu trả lời kèm căn cứ pháp lý cụ thể.
               </p>
 
-              <div className="example-box">
-                <div className="example-title">
-                  Ví dụ
-                </div>
+              <div className="example-list">
+                <span className="example-label">
+                  Câu hỏi gợi ý
+                </span>
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    setInput(
-                      "Người lao động đơn phương chấm dứt hợp đồng lao động thì phải báo trước bao nhiêu ngày?",
-                    )
-                  }
-                >
-                  Người lao động đơn phương chấm dứt
-                  hợp đồng lao động thì phải báo trước
-                  bao nhiêu ngày?
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setInput(
-                      "Người giúp việc gia đình muốn nghỉ việc thì phải báo trước bao lâu?",
-                    )
-                  }
-                >
-                  Người giúp việc gia đình muốn nghỉ
-                  việc thì phải báo trước bao lâu?
-                </button>
+                {EXAMPLE_QUESTIONS.map((question) => (
+                  <button
+                    key={question}
+                    type="button"
+                    onClick={() => setInput(question)}
+                  >
+                    {question}
+                  </button>
+                ))}
               </div>
             </div>
           ) : (
@@ -203,9 +199,9 @@ export default function Chat() {
 
               {loading && (
                 <div className="message-row message-row-assistant">
-                  <div className="message-bubble message-assistant">
+                  <div className="message-assistant">
                     <div className="message-role">
-                      Vietnam Legal Assistant
+                      Trợ lý
                     </div>
 
                     <div className="loading-state">
