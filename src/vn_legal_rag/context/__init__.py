@@ -5,6 +5,11 @@ from vn_legal_rag.context.models import (
     ContextResult,
     DocumentContext,
 )
+from vn_legal_rag.context.selector import (
+    ContextSelector,
+    SelectorConfig,
+    SpecialCaseRule,
+)
 
 __all__ = [
     "ArticleContext",
@@ -12,4 +17,7 @@ __all__ = [
     "ContextChunk",
     "ContextResult",
     "DocumentContext",
+    "ContextSelector",
+    "SelectorConfig",
+    "SpecialCaseRule",
 ]

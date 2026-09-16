@@ -68,6 +68,7 @@ class LocalLLM:
         response_schema: dict[str, Any] | None = None,
         max_tokens: int | None = None,
         temperature: float | None = None,
+        system_prompt: str | None = None,
     ) -> str:
 
         if max_tokens is None:
@@ -111,8 +112,9 @@ class LocalLLM:
                 {
                     "role": "system",
                     "content": (
-                        "Bạn là một trợ lý xử lý "
-                        "truy vấn pháp luật Việt Nam."
+                        system_prompt
+                        if system_prompt
+                        else "Bạn là một trợ lý xử lý truy vấn pháp luật Việt Nam."
                     ),
                 },
                 {

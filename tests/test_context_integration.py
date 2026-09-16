@@ -326,7 +326,16 @@ def main() -> None:
             "ContextBuilder returned empty context."
         )
 
-    print_context(context_result)
+    from vn_legal_rag.context import ContextSelector
+
+    selector = ContextSelector()
+
+    selected_context = selector.select(
+        query=QUERY,
+        context=context_result,
+    )
+
+    print_context(selected_context)
 
     # --------------------------------------------------------
     # 9. Basic sanity checks
@@ -334,18 +343,18 @@ def main() -> None:
 
     print_separator("9. SANITY CHECKS")
 
-    assert context_result.input_chunk_count == len(
+    assert selected_context.input_chunk_count == len(
         reranked
     )
 
     assert (
-        context_result.deduplicated_chunk_count
-        <= context_result.input_chunk_count
+        selected_context.deduplicated_chunk_count
+        <= selected_context.input_chunk_count
     )
 
-    assert context_result.document_count > 0
+    assert selected_context.document_count > 0
 
-    rendered = context_result.rendered_text.strip()
+    rendered = selected_context.rendered_text.strip()
 
     assert rendered
 
