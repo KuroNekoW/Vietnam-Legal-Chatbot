@@ -2,17 +2,35 @@
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
+
 [project]
 name = "vn_legal_rag"
 version = "0.1.0"
-description = "Vietnam Law chatbot"
+description = "Vietnamese legal question answering system using retrieval-augmented generation"
 requires-python = ">=3.11"
 
 dependencies = [
-    "transformers",
-    "huggingface_hub",
+    # ============================================================
+    # Core ML / NLP
+    # ============================================================
 
-    # Crawling
+    # Pin to the version that is compatible with the current
+    # Vietnamese_Reranker setup and Qwen3 support.
+    "transformers==4.51.3",
+    "huggingface_hub>=0.30,<1.0",
+    "torch>=2.6,<3",
+
+    # Embedding
+    "sentence-transformers>=5.0.0,<6",
+
+    # Vietnamese Reranker tokenizer / runtime helpers
+    "sentencepiece>=0.2.0",
+    "tiktoken>=0.9.0",
+
+    # ============================================================
+    # Crawling / dataset
+    # ============================================================
+
     "playwright>=1.54.0",
     "beautifulsoup4>=4.13.0",
     "requests>=2.32.0",
@@ -20,49 +38,115 @@ dependencies = [
     "datasets>=4.0.0",
     "pyarrow>=21.0.0",
 
-    # Data
-    "pandas>=2.3.0",
-    "numpy>=2.3.0",
+    # ============================================================
+    # Data processing
+    # ============================================================
 
-    # Embedding
-    "sentence-transformers>=5.0.0",
+    "pandas>=2.3.0,<3",
+    "numpy>=2.3.0,<3",
 
-    # Vector Database
-    #"faiss-cpu>=1.12.0",
-    "qdrant-client",
+    # ============================================================
+    # Vector database
+    # ============================================================
 
-    #reranker
-    "sentencepiece",
-    "tiktoken",
+    # "faiss-cpu>=1.12.0",
+    "qdrant-client>=1.14.0,<2",
 
+    # ============================================================
     # API
-    "fastapi>=0.116.0",
-    "uvicorn[standard]>=0.35.0",
+    # ============================================================
 
-    # Validation
-    "pydantic>=2.11.0",
+    "fastapi>=0.116.0,<1",
+    "uvicorn[standard]>=0.35.0,<1",
 
-    # Utilities
+    # ============================================================
+    # Validation / configuration
+    # ============================================================
+
+    "pydantic>=2.11.0,<3",
     "python-dotenv>=1.1.0",
+
+    # ============================================================
+    # Utilities
+    # ============================================================
+
     "tqdm>=4.67.0",
-    "loguru>=0.7.3"
+    "loguru>=0.7.3",
 ]
+
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "black>=25.0.0",
+    "ruff>=0.12.0",
+]
+
+
+# ================================================================
+# IMPORTANT: llama-cpp-python
+# ================================================================
+#
+# DO NOT add llama-cpp-python to [project].dependencies here.
+#
+# The project uses the pre-built CUDA wheel for CUDA 12.5.
+# pip's standard pyproject dependency mechanism cannot express
+# an --extra-index-url for one dependency in a portable way.
+#
+# Install the CUDA-enabled wheel separately:
+#
+#   pip install llama-cpp-python \
+#       --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu125
+#
+# The official llama-cpp-python project documents the CUDA wheel
+# index scheme, including cu125. Keep this installation step
+# separate from `pip install -e .` so pip does not fall back to
+# building the package from source.
+#
+# ================================================================
+# IMPORTANT: Qwen3-4B-Q4_K_M.gguf
+# ================================================================
+#
+# GGUF model weights are NOT Python dependencies and should not be
+# declared in [project].dependencies.
+#
+# Current model:
+#   Repo: Qwen/Qwen3-4B-GGUF
+#   File: Qwen3-4B-Q4_K_M.gguf
+#
+# Download once with:
+#
+#   hf download Qwen/Qwen3-4B-GGUF Qwen3-4B-Q4_K_M.gguf \
+#       --local-dir models
+#
+# The application can then use:
+#
+#   models/Qwen3-4B-Q4_K_M.gguf
+#
+# ================================================================
+
 
 [tool.setuptools]
 package-dir = { "" = "src" }
 
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
+
 [tool.black]
 line-length = 88
+
 
 [tool.ruff]
 line-length = 88
 target-version = "py311"
 
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
+
+# Kept for compatibility with the existing project configuration.
 [tool.vercel]
 entrypoint = "src.api.main:app"
