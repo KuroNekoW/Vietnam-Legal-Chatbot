@@ -28,15 +28,16 @@ The current architecture is intentionally modular so that the retrieval system, 
 16. [FastAPI Backend](#fastapi-backend)
 17. [Next.js Frontend](#nextjs-frontend)
 18. [Running the Complete System](#running-the-complete-system)
-19. [Running Individual Tests](#running-individual-tests)
-20. [Testing the Full RAG Pipeline](#testing-the-full-rag-pipeline)
-21. [Example Questions](#example-questions)
-22. [Configuration](#configuration)
-23. [Development Workflow](#development-workflow)
-24. [Troubleshooting](#troubleshooting)
-25. [Design Decisions](#design-decisions)
-26. [Current Limitations](#current-limitations)
-27. [Roadmap](#roadmap)
+19. [Deployment (Vercel + Cloudflare Tunnel)](#deployment-vercel--cloudflare-tunnel)
+20. [Running Individual Tests](#running-individual-tests)
+21. [Testing the Full RAG Pipeline](#testing-the-full-rag-pipeline)
+22. [Example Questions](#example-questions)
+23. [Configuration](#configuration)
+24. [Development Workflow](#development-workflow)
+25. [Troubleshooting](#troubleshooting)
+26. [Design Decisions](#design-decisions)
+27. [Current Limitations](#current-limitations)
+28. [Roadmap](#roadmap)
 
 ---
 
@@ -188,6 +189,8 @@ The architecture is designed to reduce hallucination risk by requiring the answe
                  └─────────────────┘
 ```
 
+This diagram describes the logical pipeline. For how these pieces are physically hosted when the frontend is deployed (Next.js on Vercel, FastAPI + pipeline + Qwen3-4B kept on a local GPU machine and reached through a tunnel), see [Deployment](#deployment-vercel--cloudflare-tunnel).
+
 ---
 
 # Project Structure
@@ -304,14 +307,14 @@ Recommended environment:
 ## 1. Clone the repository
 
 ```powershell
-git clone <your-repository-url>
+git clone ...
 cd Vietnam-Legal-Chatbot
 ```
 
 If the project already exists locally:
 
 ```powershell
-cd D:\Code\Vietnam-Legal-Chatbot
+cd <...>\Vietnam-Legal-Chatbot
 ```
 
 ---
@@ -438,7 +441,7 @@ pip install -U huggingface_hub
 Download the model:
 
 ```powershell
-hf download Qwen/Qwen3-4B-GGUF Qwen3-4B-Q4_K_M.gguf --local-dir models
+huggingface download Qwen/Qwen3-4B-GGUF Qwen3-4B-Q4_K_M.gguf --local-dir models
 ```
 
 After downloading, verify:
@@ -463,10 +466,8 @@ Qdrant runs through Docker and stores the vector index separately from the Pytho
 
 ## Start Qdrant
 
-Example Docker command:
-
 ```powershell
-docker run -p 6333:6333 -p 6334:6334 -v qdrant_storage:/qdrant/storage qdrant/qdrant
+docker compose up -d
 ```
 
 Keep this container running while using the RAG application.
@@ -1090,6 +1091,8 @@ It should **not** directly access:
 
 # Frontend Environment
 
+## Local development
+
 Create:
 
 ```text
@@ -1101,6 +1104,18 @@ with:
 ```env
 NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
 ```
+
+## Vercel deployment
+
+The frontend is deployed on **Vercel**, while the RAG backend (retriever, reranker, and the local Qwen3-4B model) keeps running on a local machine with a GPU — Vercel does not run the Python backend.
+
+In the Vercel project, set the same variable under **Settings → Environment Variables** to a **public HTTPS URL that tunnels into the local backend** (see [Deployment](#deployment-vercel--cloudflare-tunnel)):
+
+```env
+NEXT_PUBLIC_API_URL=https://<tunnel-subdomain>.trycloudflare.com
+```
+
+`NEXT_PUBLIC_*` variables are baked into the client bundle at build time. Any time this value changes (for example, a new Quick Tunnel URL), the project must be **redeployed** on Vercel for the change to take effect — restarting the tunnel alone is not enough.
 
 ---
 
@@ -1136,7 +1151,23 @@ and, if used:
 http://127.0.0.1:3000
 ```
 
-For production, replace development CORS settings with the actual deployed frontend origin.
+Once the frontend is deployed on Vercel, FastAPI must also allow the **deployed Vercel origin**, since the browser now calls the backend from `vercel.app` instead of `localhost`:
+
+```python
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "https://<project-name>.vercel.app",
+    ],
+    allow_methods=["POST"],
+    allow_headers=["*"],
+)
+```
+
+The tunnel (Cloudflare Tunnel, ngrok, etc.) only forwards traffic to `localhost:8000` — it does not change what CORS origin the browser sends, so the allowed origin is always the **frontend's** domain (Vercel), not the tunnel's domain.
 
 ---
 
@@ -1203,6 +1234,83 @@ Qwen3-4B
   ↓
 LegalAnswer
 ```
+
+---
+
+# Deployment (Vercel + Cloudflare Tunnel)
+
+## Why this setup
+
+The Next.js frontend is stateless and can be hosted anywhere, so it is deployed on **Vercel**.
+
+The RAG backend (retriever, reranker, Context Builder/Selector, and the local Qwen3-4B model) requires a GPU and local model/vector-store access, so it is **not** deployed to Vercel. It keeps running on a local machine, and a tunnel exposes it to the internet only for the duration of testing.
+
+```text
+Browser (anywhere)
+      │  HTTPS
+      ▼
+Next.js on Vercel
+      │  HTTPS (fetch from the browser, not from Vercel's servers)
+      ▼
+Cloudflare Tunnel  ──────►  localhost:8000 (FastAPI + RAG pipeline + Qwen3-4B)
+                             running on the local GPU machine
+```
+
+Because `NEXT_PUBLIC_API_URL` is a public, client-side variable, the browser calls the tunnel URL **directly** — Vercel's servers are never in the request path for `/api/chat`, and no RAG computation happens on Vercel.
+
+## 1. Start the backend locally
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+uvicorn api.main:app --host 0.0.0.0 --port 8000
+```
+
+`--host 0.0.0.0` is required so the tunnel can forward external traffic to it (`127.0.0.1` only accepts local connections).
+
+## 2. Expose it with Cloudflare Tunnel
+
+Install `cloudflared`, then run:
+
+```powershell
+cloudflared tunnel --url http://localhost:8000
+```
+
+This prints a public HTTPS URL such as:
+
+```text
+https://random-words-here.trycloudflare.com
+```
+
+This is a **Quick Tunnel**: no Cloudflare account or domain required, but the URL changes every time the command is restarted. For a stable, permanent URL (e.g. `api.yourdomain.com`), use a **Named Tunnel** instead, which requires a domain added to a Cloudflare account (`cloudflared tunnel login` → `cloudflared tunnel create` → `cloudflared tunnel route dns`).
+
+## 3. Allow the Vercel origin in FastAPI
+
+See [CORS](#cors). The deployed Vercel domain must be added to `allow_origins`.
+
+## 4. Point Vercel at the tunnel
+
+In the Vercel project, set:
+
+```env
+NEXT_PUBLIC_API_URL=https://random-words-here.trycloudflare.com
+```
+
+under **Settings → Environment Variables**, then trigger a **Redeploy** from the Deployments tab so the new value is compiled into the frontend bundle.
+
+## 5. Verify
+
+```powershell
+curl -X POST https://random-words-here.trycloudflare.com/api/chat -H "Content-Type: application/json" -d "{\"query\":\"test\"}"
+```
+
+Then open the Vercel URL in a browser and send a real question.
+
+## Operational notes
+
+- The tunnel and `uvicorn` process must both keep running on the local machine for as long as the deployed frontend needs to answer questions; closing either one breaks `/api/chat` even though the Vercel site itself stays up.
+- A Quick Tunnel URL is public — anyone with the link can call the backend directly. For anything beyond short-lived testing, add a shared-secret header (checked in FastAPI) or move to a Named Tunnel with additional access control.
+- Concurrent requests are bottlenecked by whatever hardware runs Qwen3-4B locally (single GPU). Multiple simultaneous users will queue rather than run in parallel unless the backend is explicitly configured for batched/concurrent inference.
+- This setup is meant for demos and testing with a small number of people. A durable public deployment would instead run the backend (optionally containerized, see the project's Docker setup if present) on an always-on host with adequate GPU/CPU resources, removing the dependency on a local machine and tunnel altogether.
 
 ---
 
@@ -1594,6 +1702,8 @@ The project can still work for public model downloads, but authenticated access 
 
 ## Frontend cannot call FastAPI
 
+### Local development
+
 Check:
 
 ```text
@@ -1610,6 +1720,17 @@ Verify:
 2. `/api/health` responds.
 3. `frontend/.env.local` points to the correct API.
 4. FastAPI CORS allows the frontend origin.
+
+### Deployed on Vercel + Cloudflare Tunnel
+
+Verify, in order:
+
+1. `uvicorn` is still running locally, and `cloudflared tunnel` is still running in its own terminal — both must stay open. If either was closed, the tunnel URL is dead even though the Vercel site loads fine.
+2. `curl` the tunnel URL directly (`curl https://<tunnel>.trycloudflare.com/api/health`). If this fails, the problem is the backend/tunnel, not Vercel.
+3. The tunnel URL has not changed. Quick Tunnel URLs are regenerated every time `cloudflared tunnel --url ...` is restarted; a stale `NEXT_PUBLIC_API_URL` on Vercel is the most common cause of failures after a fresh restart.
+4. The Vercel project's `NEXT_PUBLIC_API_URL` matches the current tunnel URL, and a **Redeploy** was triggered after the value was last changed — saving the environment variable alone does not update an already-built deployment.
+5. FastAPI's `allow_origins` includes the exact deployed Vercel domain (`https://vnlegalchatbot.vercel.app`), not `localhost`.
+6. The browser console does not show a mixed-content error — the tunnel URL must be `https://`, not `http://`.
 
 ---
 
@@ -1929,13 +2050,13 @@ pip install -e .
 pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu125
 
 # 6. Download local Qwen GGUF
-hf download Qwen/Qwen3-4B-GGUF Qwen3-4B-Q4_K_M.gguf --local-dir models
+huggingface download Qwen/Qwen3-4B-GGUF Qwen3-4B-Q4_K_M.gguf --local-dir models
 
 # 7. Install Playwright browser if crawling features are needed
 playwright install
 
 # 8. Start Qdrant through Docker
-docker run -p 6333:6333 -p 6334:6334 -v qdrant_storage:/qdrant/storage qdrant/qdrant
+docker compose up -d
 
 # 9. Start FastAPI
 uvicorn api.main:app --reload
